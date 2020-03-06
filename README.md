@@ -1,6 +1,6 @@
 # Discord Menus
 
-A work-in-progress framework for Discord JS libraries for building a series of interactable prompts (or menus) in a chat-like fashio with an N-ary tree data structure. Each phase is a tree node with a user-specified `n` number of children with conditions to decide which branch the dialogue should continue through to.
+A work-in-progress framework for Discord JS libraries for building a series of interactable prompts (or menus) in a chat-like fashio with an N-ary tree structure. Each phase is a tree node with a user-specified `n` number of children with optional conditions to decide which branch the dialogue should continue through to.
 
 ## Example
 ```js
@@ -90,7 +90,7 @@ interface PhaseCollectorInterface extends EventEmitter {
 
 ## Testing
 
-Unit testing is straightforward since every series of responses is built up from individual phases of functions that can be exported for testing.
+Unit testing is straightforward since the tree of responses is built up from individual phases (or nodes) represented by functions that can be exported for testing.
 
 Integration testing still needs to be more robust. As of now (using the previous example), a trivial test could be:
 ```ts
@@ -124,9 +124,11 @@ it('runs correctly for age <= 20', () => {
   const name = 'George'
   const age = '30'
   const promise = PhaseRunner.run(askName, message, () => emitter)
-  await flushPromises() // Wait for all pending promise callbacks to be executed for the emitter to set up
+  // Wait for all pending promise callbacks to be executed for the emitter to set up
+  await flushPromises()
   emitter.emit('accept', createMockMessage(name), {})
-  await flushPromises() // Wait for all pending promise callbacks to be executed for message to be accepted
+  // Wait for all pending promise callbacks to be executed for message to be accepted
+  await flushPromises()
   emitter.emit('accept', createMockMessage(age), {
     name
   })
