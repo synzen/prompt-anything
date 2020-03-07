@@ -34,7 +34,7 @@ export class PhaseRunner {
    */
   static async run (phase: Phase, message: MessageInterface, collectorCreator: PhaseCollectorCreator, initialData: PhaseData = {}): Promise<void> {
     if (!this.valid(phase)) {
-      throw new Error('Invalid phase setup')
+      throw new Error('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     }
     return this.execute(phase, message, collectorCreator, initialData)
   }

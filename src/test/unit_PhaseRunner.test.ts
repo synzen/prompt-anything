@@ -46,7 +46,7 @@ describe('Unit::PhaseRunner', () => {
       const phase = new Phase(phaseForm, phaseFunc)
       await expect(PhaseRunner.run(phase, message, () => new EventEmitter()))
         .rejects
-        .toThrow('Invalid phase setup')
+        .toThrow('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     })
     it('calls this.execute', async () => {
       jest.spyOn(PhaseRunner, 'valid')
