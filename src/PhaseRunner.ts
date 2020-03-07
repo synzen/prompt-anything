@@ -12,9 +12,9 @@ export class PhaseRunner {
    */
   static valid (phase: Phase): boolean {
     const children = phase.children
-    for (let i = 0; i < children.length; ++i) {
-      const child = children[i]
-      if (!child.condition && children.length > 1) {
+    const multipleChildren = children.length > 1
+    for (const child of children) {
+      if (multipleChildren && !child.condition) {
         return false
       }
       if (!this.valid(child)) {

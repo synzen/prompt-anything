@@ -4,6 +4,12 @@ import { PhaseCollectorInterface } from '../types/discord'
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
 
+async function flushPromises(): Promise<void> {
+  return new Promise(resolve => {
+    setImmediate(resolve);
+  });
+}
+
 type MockChannel = {
   createMessageCollector: jest.Mock;
   send: jest.Mock;
@@ -177,13 +183,13 @@ describe('Unit::Phase', () => {
           .toHaveBeenCalledWith(Phase.STRINGS.exit)
         expect(terminateSpy).toHaveBeenCalledTimes(1)
       })
-      it('rejects the phase run if message send fails', async () => {
+      it('terminates and rejects the phase run if message send fails', async () => {
         const error = new Error('qateswgry')
         message.channel.send.mockRejectedValue(error)
         const phaseRun = phase.collect(message, emitterCreator)
         emitter.emit('exit')
         await expect(phaseRun).rejects.toThrow(error)
-        expect(terminateSpy).not.toHaveBeenCalled()
+        expect(terminateSpy).toHaveBeenCalled()
       })
     })
     describe('collector inactivity', () => {
@@ -195,13 +201,13 @@ describe('Unit::Phase', () => {
           .toHaveBeenCalledWith(Phase.STRINGS.inactivity)
         expect(terminateSpy).toHaveBeenCalledTimes(1)
       })
-      it('rejects phase run if message send fails', async () => {
+      it('terminates and rejects phase run if message send fails', async () => {
         const error = new Error('qateswgry')
         message.channel.send.mockRejectedValue(error)
         const phaseRun = phase.collect(message, emitterCreator)
         emitter.emit('inactivity')
         await expect(phaseRun).rejects.toThrow(error)
-        expect(terminateSpy).not.toHaveBeenCalled()
+        expect(terminateSpy).toHaveBeenCalled()
       })
     })
     describe('collector error', () => {

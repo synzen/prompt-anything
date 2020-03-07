@@ -82,10 +82,11 @@ export class Phase extends TreeNode<Phase> {
       }
       const collector = createCollector(message, this.function.bind(this), data, this.duration)
 
-      const terminate = (lastPhaseMessage: MessageInterface): void => {
+      const terminate = async (terminateString: string): Promise<void> => {
         this.terminateHere()
+        const sent = await channel.send(terminateString)
         resolve({
-          message: lastPhaseMessage,
+          message: sent,
           data
         })
       }
@@ -93,26 +94,20 @@ export class Phase extends TreeNode<Phase> {
       collector.once('error', (lastUserInput: MessageInterface, err: Error) => {
         reject(err)
       })
-
-      collector.once('exit', (userExitMessage: MessageInterface) => {
-        channel.send(Phase.STRINGS.exit)
-          .then((exitMessage) => terminate(exitMessage))
+      collector.once('inactivity', (): void => {
+        terminate(Phase.STRINGS.inactivity)
           .catch(reject)
       })
-
+      collector.once('exit', (exitMessage: MessageInterface) => {
+        terminate(Phase.STRINGS.exit)
+          .catch(reject)
+      })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: PhaseData): void => {
         resolve({
           message: acceptMessage,
           data: acceptData
         })
       })
-
-      collector.once('inactivity', (): void => {
-        channel.send(Phase.STRINGS.inactivity)
-          .then((exitMessage) => terminate(exitMessage))
-          .catch(reject)
-      })
-
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         const invalidFeedback = err.message || Phase.STRINGS.rejected
         channel.send(invalidFeedback)
