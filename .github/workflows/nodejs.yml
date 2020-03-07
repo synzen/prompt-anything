@@ -27,14 +27,16 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     # - run: npm run test-coverage
-    #   env:
-    #     CI: true
+      env:
+        CI: true
     - name: Test & publish code coverage
       uses: paambaati/codeclimate-action@v2.5.4
       env:
         CC_TEST_REPORTER_ID: ${{secrets.CC_TEST_REPORTER_ID}}
       with:
         coverageCommand: npm run test-coverage
+        coverageLocations:
+          "./coverage/lcov.info:lcov"
         debug: true
     # - name: Coveralls
     #   uses: coverallsapp/github-action@master
