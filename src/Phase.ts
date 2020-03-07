@@ -6,6 +6,7 @@ import { MessageInterface } from './types/discord';
 export class Phase extends TreeNode<Phase> {
   formatGenerator: FormatGenerator
   readonly duration: number
+  readonly messages: Array<MessageInterface> = []
   readonly function?: PhaseFunction
   readonly condition?: PhaseCondition
   public static STRINGS = {
@@ -79,7 +80,7 @@ export class Phase extends TreeNode<Phase> {
         })
         return
       }
-      const collector = createCollector(message, this.function, data, this.duration)
+      const collector = createCollector(message, this.function.bind(this), data, this.duration)
 
       const terminate = (lastPhaseMessage: MessageInterface): void => {
         this.terminateHere()
