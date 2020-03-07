@@ -25,17 +25,17 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm run test-coverage
-      env:
-        CI: true
+    # - run: npm ci
+    # - run: npm run test-coverage
+    #   env:
+    #     CI: true
     - name: Test & publish code coverage
       uses: paambaati/codeclimate-action@v2.5.4
       env:
         CC_TEST_REPORTER_ID: ${{secrets.CC_TEST_REPORTER_ID}}
-      # with:
-      #   coverageCommand: npm run coverage
-      #   debug: true
+      with:
+        coverageCommand: npm run test-coverage
+        debug: true
     # - name: Coveralls
     #   uses: coverallsapp/github-action@master
     #   with:
