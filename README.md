@@ -1,6 +1,7 @@
 
 # Discord Menus
-[![Coverage Status](https://coveralls.io/repos/github/synzen/discord-menus/badge.svg?branch=coveralls)](https://coveralls.io/github/synzen/discord-menus?branch=coveralls)
+[![Maintainability](https://api.codeclimate.com/v1/badges/4be50d131276538502d1/maintainability)](https://codeclimate.com/github/synzen/discord-menus/maintainability)
+<a href="https://codeclimate.com/github/synzen/discord-menus/test_coverage"><img src="https://api.codeclimate.com/v1/badges/4be50d131276538502d1/test_coverage" /></a>
 
 
 A work-in-progress framework for Discord JS libraries for building a series of interactable prompts (or menus) in a chat-like fashio with an N-ary tree structure. Each phase is a tree node with a user-specified `n` number of children with optional conditions to decide which branch the dialogue should continue through to.
