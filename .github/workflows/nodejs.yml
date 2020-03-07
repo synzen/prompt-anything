@@ -29,10 +29,17 @@ jobs:
     - run: npm run test-coverage
       env:
         CI: true
-    - name: Coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Test & publish code coverage
+      uses: paambaati/codeclimate-action@v2.5.4
+      env:
+        CC_TEST_REPORTER_ID: ${{secrets.CC_TEST_REPORTER_ID}}
+      # with:
+      #   coverageCommand: npm run coverage
+      #   debug: true
+    # - name: Coveralls
+    #   uses: coverallsapp/github-action@master
+    #   with:
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
   lint:
     name: ESLint
     runs-on: ubuntu-latest
