@@ -65,6 +65,7 @@
     "forceConsistentCasingInFileNames": true  /* Disallow inconsistently-cased references to the same file. */
   },
   "exclude": [
-    "src/test/**/*"
+    "src/test/**/*",
+    "build"
   ]
 }
