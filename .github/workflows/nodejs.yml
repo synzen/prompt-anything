@@ -4,14 +4,15 @@
 name: Node.js CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  [push, pull_request]
+  # push:
+    # branches: [ master ]
+  # pull_request:
+    # branches: [ master ]
 
 jobs:
-  build:
-
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     strategy:
@@ -25,7 +26,42 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
-    - run: npm run build --if-present
     - run: npm test
+      env:
+        CI: true
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [11.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm ci
+    - run: npm run lint
+      env:
+        CI: true
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [11.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm ci
+    - run: npm run prepare
       env:
         CI: true
