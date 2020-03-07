@@ -37,7 +37,9 @@ const tooYoung = new Phase((m, data) => ({
   text: `Wow ${data.name}, you are pretty young at ${data.age} years old!`
 }), undefined, (m, data) => data.age < 20)
 
+
 askName.setChildren([askAge])
+// Nodes with more than 1 sibling must have conditions defined
 askAge.setChildren([tooOld, tooYoung])
 
 // Message and messageCollectorCreator must be implemented by user
