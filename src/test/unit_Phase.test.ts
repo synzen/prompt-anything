@@ -160,7 +160,7 @@ describe('Unit::Phase', () => {
       emitter = new EventEmitter()
       phase = new Phase(phaseVis, phaseFunc)
       message = createMockMessage()
-      terminateSpy = jest.spyOn(phase, 'terminateHere')
+      terminateSpy = jest.spyOn(phase, 'terminateHere').mockReturnValue()
       emitterCreator = (): PhaseCollectorInterface => emitter
     })
     it('resolves with original message and data if no phase function', async () => {
@@ -191,6 +191,15 @@ describe('Unit::Phase', () => {
         await expect(phaseRun).rejects.toThrow(error)
         expect(terminateSpy).toHaveBeenCalled()
       })
+      it('stores the messages', async () => {
+        const phaseRun = phase.collect(message, emitterCreator, {})
+        const exitMessage = createMockMessage()
+        const exitConfirmMessage = createMockMessage()
+        message.channel.send.mockResolvedValueOnce(exitConfirmMessage)
+        emitter.emit('exit', exitMessage)
+        await phaseRun
+        expect(phase.messages).toEqual([exitMessage, exitConfirmMessage])
+      })
     })
     describe('collector inactivity', () => {
       it('terminates on collector inactivity', async () => {
@@ -209,20 +218,39 @@ describe('Unit::Phase', () => {
         await expect(phaseRun).rejects.toThrow(error)
         expect(terminateSpy).toHaveBeenCalled()
       })
+      it('stores the messages', async () => {
+        const phaseRun = phase.collect(message, emitterCreator, {})
+        const exitConfirmMessage = createMockMessage()
+        message.channel.send.mockResolvedValueOnce(exitConfirmMessage)
+        emitter.emit('inactivity')
+        await phaseRun
+        expect(phase.messages).toEqual([exitConfirmMessage])
+      })
     })
     describe('collector error', () => {
       it('rejects phase run', async () => {
         const error = new Error('qateswgry')
         const phaseRun = phase.collect(message, emitterCreator)
-        emitter.emit('error', createMockMessage(), error)
+        const lastUserInput = createMockMessage()
+        emitter.emit('error', lastUserInput, error)
         await expect(phaseRun).rejects.toThrow(error)
+      })
+      it('stores the messages', async () => {
+        const error = new Error('qateswgry')
+        const phaseRun = phase.collect(message, emitterCreator)
+        const lastUserInput = createMockMessage()
+        emitter.emit('error', lastUserInput, error)
+        try {
+          await phaseRun
+        } catch (err) {
+          expect(phase.messages).toEqual([lastUserInput])
+        }
       })
     })
     describe('collector reject', () => {
       it('sends the custom error message', async () => {
         const error = new Rejection('qateswgry')
         const phaseRun = phase.collect(message, emitterCreator)
-        message.channel.send.mockResolvedValue(1)
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await phaseRun
@@ -237,6 +265,18 @@ describe('Unit::Phase', () => {
         await phaseRun
         expect(message.channel.send).toHaveBeenCalledWith(Phase.STRINGS.rejected)
       })
+      it('stores the messages', async () => {
+        const error = new Rejection('qateswgry')
+        const phaseRun = phase.collect(message, emitterCreator)
+        const rejectedInput = createMockMessage()
+        const feedbackResponse = createMockMessage()
+        message.channel.send.mockResolvedValueOnce(feedbackResponse)
+        emitter.emit('reject', rejectedInput, error)
+        await flushPromises()
+        emitter.emit('exit')
+        await phaseRun
+        expect(phase.messages).toEqual([rejectedInput, feedbackResponse, undefined, undefined])
+      })
     })
     describe('collector accept', () => {
       it('resolves correctly', async () => {
@@ -245,12 +285,21 @@ describe('Unit::Phase', () => {
           foo: 1
         }
         const phaseRun = phase.collect(message, emitterCreator)
-        message.channel.send.mockResolvedValue(1)
         emitter.emit('accept', acceptMessage, acceptData)
         await expect(phaseRun).resolves.toEqual({
           message: acceptMessage,
           data: acceptData
         })
+      })
+      it('stores the messages', async () => {
+        const acceptMessage = createMockMessage()
+        const acceptData = {
+          foo: 1
+        }
+        const phaseRun = phase.collect(message, emitterCreator)
+        emitter.emit('accept', acceptMessage, acceptData)
+        await phaseRun
+        await expect(phase.messages).toEqual([acceptMessage])
       })
     })
   })

@@ -63,6 +63,10 @@ export class Phase extends TreeNode<Phase> {
     return null
   }
 
+  storeMessage (message: MessageInterface): void {
+    this.messages.push(message)
+  }
+
   /**
    * Runs the Phase function for every message collected.
    * Reject when channel send promise rejects.
@@ -85,6 +89,7 @@ export class Phase extends TreeNode<Phase> {
       const terminate = async (terminateString: string): Promise<void> => {
         this.terminateHere()
         const sent = await channel.send(terminateString)
+        this.storeMessage(sent)
         resolve({
           message: sent,
           data
@@ -92,6 +97,7 @@ export class Phase extends TreeNode<Phase> {
       }
 
       collector.once('error', (lastUserInput: MessageInterface, err: Error) => {
+        this.storeMessage(lastUserInput)
         reject(err)
       })
       collector.once('inactivity', (): void => {
@@ -99,18 +105,22 @@ export class Phase extends TreeNode<Phase> {
           .catch(reject)
       })
       collector.once('exit', (exitMessage: MessageInterface) => {
+        this.storeMessage(exitMessage)
         terminate(Phase.STRINGS.exit)
           .catch(reject)
       })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: PhaseData): void => {
+        this.storeMessage(acceptMessage)
         resolve({
           message: acceptMessage,
           data: acceptData
         })
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
+        this.storeMessage(userInput)
         const invalidFeedback = err.message || Phase.STRINGS.rejected
         channel.send(invalidFeedback)
+          .then(m => this.storeMessage(m))
           .catch(reject)
       })
     })
