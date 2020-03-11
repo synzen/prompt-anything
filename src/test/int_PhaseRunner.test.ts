@@ -41,29 +41,16 @@ describe('Unit::PhaseRunner', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
-  describe('static execute', () => {
+  describe('execute', () => {
     it('runs the right phases (ignoring collect)', async () => {
       const message = createMockMessage()
       const phaseR = new Phase(phaseForm, phaseFunc)
-      const phaseRC1 = new Phase(phaseForm, phaseFunc)
-      Object.defineProperty(phaseRC1, 'condition', {
-        value: () => false
-      })
-      const phaseRC2 = new Phase(phaseForm, phaseFunc)
-      Object.defineProperty(phaseRC2, 'condition', {
-        value: () => true
-      })
+      const phaseRC1 = new Phase(phaseForm, phaseFunc, () => false)
+      const phaseRC2 = new Phase(phaseForm, phaseFunc, () => true)
       const phaseRC11 = new Phase(phaseForm, phaseFunc)
-      const phaseRC21 = new Phase(phaseForm, phaseFunc)
-      Object.defineProperty(phaseRC21, 'condition', {
-        value: () => true
-      })
-      const phaseRC22 = new Phase(phaseForm, phaseFunc)
-      Object.defineProperty(phaseRC22, 'condition', {
-        value: () => false
-      })
-      const phaseRC211 = new Phase(phaseForm, phaseFunc)
-      const phases = [phaseR, phaseRC1, phaseRC2, phaseRC11, phaseRC21, phaseRC22, phaseRC211]
+      const phaseRC111 = new Phase(phaseForm, phaseFunc, () => true)
+      const phaseRC112 = new Phase(phaseForm, phaseFunc, () => false)
+      const phases = [phaseR, phaseRC1, phaseRC2, phaseRC11, phaseRC111, phaseRC112]
       const spies = phases.map(p => {
         p.children = []
         return jest.spyOn(p, 'collect').mockResolvedValue({
@@ -73,39 +60,39 @@ describe('Unit::PhaseRunner', () => {
       })
 
       phaseR.children = [phaseRC1, phaseRC2]
-      phaseRC1.children = [phaseRC11]
-      phaseRC2.children = [phaseRC21, phaseRC22]
-      phaseRC21.children = [phaseRC211]
-
-      await PhaseRunner.execute(phaseR, message, () => new EventEmitter())
+      phaseRC2.children = [phaseRC11]
+      // Either of these should not collect since they have no children
+      phaseRC11.children = [phaseRC111, phaseRC112]
+      const runner = new PhaseRunner()
+      await runner.execute(phaseR, message, () => new EventEmitter())
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
       expect(spies[2]).toHaveBeenCalledTimes(1)
-      expect(spies[3]).not.toHaveBeenCalled()
-      expect(spies[4]).toHaveBeenCalledTimes(1)
+      expect(spies[3]).toHaveBeenCalledTimes(1)
+      expect(spies[4]).not.toHaveBeenCalled()
       expect(spies[5]).not.toHaveBeenCalled()
-      expect(spies[6]).not.toHaveBeenCalled()
     })
-    describe('run', () => {
-      it('works with phase collect and getNext', async () => {
-        const message = createMockMessage()
-        const phase = new Phase(phaseForm, phaseFunc)
-        const phaseC1 = new Phase(phaseForm, phaseFunc, () => false)
-        const phaseC2 = new Phase(phaseForm, phaseFunc, () => true)
-        const phaseC21 = new Phase(phaseForm, phaseFunc)
-  
-        phase.children = [phaseC1, phaseC2]
-        phaseC2.children = [phaseC21]
-        phaseC21.children = []
-  
-        const emitter = new EventEmitter()
-        const promise = PhaseRunner.run(phase, message, () => emitter)
-        await flushPromises()
-        emitter.emit('accept', createMockMessage(), {})
-        await flushPromises()
-        emitter.emit('accept', createMockMessage(), {})
-        await promise
-      })
+  })
+  describe('run', () => {
+    it('works with phase collect and getNext', async () => {
+      const message = createMockMessage()
+      const phase = new Phase(phaseForm, phaseFunc)
+      const phaseC1 = new Phase(phaseForm, phaseFunc, () => false)
+      const phaseC2 = new Phase(phaseForm, phaseFunc, () => true)
+      const phaseC21 = new Phase(phaseForm, phaseFunc)
+
+      phase.children = [phaseC1, phaseC2]
+      phaseC2.children = [phaseC21]
+      phaseC21.children = []
+
+      const emitter = new EventEmitter()
+      const runner = new PhaseRunner()
+      const promise = runner.run(phase, message, () => emitter)
+      await flushPromises()
+      emitter.emit('accept', createMockMessage(), {})
+      await flushPromises()
+      emitter.emit('accept', createMockMessage(), {})
+      await promise
     })
   })
 })

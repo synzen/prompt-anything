@@ -38,25 +38,28 @@ describe('Unit::PhaseRunner', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
-  describe('static run', () => {
+  describe('run', () => {
     it('throws error if invalid phase', async () => {
       jest.spyOn(PhaseRunner, 'valid')
         .mockReturnValue(false)
       const message = createMockMessage()
       const phase = new Phase(phaseForm, phaseFunc)
-      await expect(PhaseRunner.run(phase, message, () => new EventEmitter()))
+      const runner = new PhaseRunner()
+      await expect(runner.run(phase, message, () => new EventEmitter()))
         .rejects
         .toThrow('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     })
     it('calls this.execute', async () => {
       jest.spyOn(PhaseRunner, 'valid')
         .mockReturnValue(true)
-      const spy = jest.spyOn(PhaseRunner, 'execute')
-        .mockResolvedValue()
+      
       const message = createMockMessage()
       const phase = new Phase(phaseForm, phaseFunc)
+      const runner = new PhaseRunner()
+      const spy = jest.spyOn(runner, 'execute')
+        .mockResolvedValue()
       const emitterCreator: PhaseCollectorCreator = () => new EventEmitter()
-      await PhaseRunner.run(phase, message, emitterCreator)
+      await runner.run(phase, message, emitterCreator)
       expect(spy).toHaveBeenCalledWith(phase, message, emitterCreator, {})
     })
   })
@@ -109,7 +112,7 @@ describe('Unit::PhaseRunner', () => {
       expect(PhaseRunner.valid(phaseR)).toEqual(true)
     })
   })
-  describe('static execute', () => {
+  describe('execute', () => {
     it('sends the message', async () => {
       const message = createMockMessage()
       const phase = new Phase(phaseForm, phaseFunc)
@@ -123,10 +126,45 @@ describe('Unit::PhaseRunner', () => {
       const data = {
         foo: 1
       }
-      await PhaseRunner.execute(phase, message, () => new EventEmitter(), data)
+      const runner = new PhaseRunner()
+      await runner.execute(phase, message, () => new EventEmitter(), data)
       expect(phaseSend).toHaveBeenCalledWith(message, data)
     })
     it('runs all phases', async () => {
+      const message = createMockMessage()
+      const phase1 = new Phase(phaseForm, phaseFunc)
+      const phase2 = new Phase(phaseForm, phaseFunc)
+      const phase3 = new Phase(phaseForm, phaseFunc)
+      jest.spyOn(phase1, 'getNext')
+        .mockReturnValue(phase2)
+      jest.spyOn(phase2, 'getNext')
+        .mockReturnValue(phase3)
+      jest.spyOn(phase3, 'getNext')
+        .mockReturnValue(null)
+      const phases = [phase1, phase2, phase3]
+      const collectSpies = phases.map(p => {
+        p.children = [new Phase(phaseForm, phaseFunc)]
+        return jest.spyOn(p, 'collect').mockResolvedValue({
+          data: {},
+          message: createMockMessage()
+        })
+      })
+      const runner = new PhaseRunner()
+      await runner.execute(phase1, message, () => new EventEmitter())
+      for (const spy of collectSpies) {
+        expect(spy).toHaveBeenCalledTimes(1)
+      }
+    })
+    it('does not call phase collect for phase with no children', async () => {
+      const message = createMockMessage()
+      const phase = new Phase(phaseForm, phaseFunc)
+      phase.children = []
+      const spy = jest.spyOn(phase, 'collect')
+      const runner = new PhaseRunner()
+      await runner.execute(phase, message, () => new EventEmitter())
+      expect(spy).not.toHaveBeenCalled()
+    })
+    it('adds each ran phase into this.ran', async () => {
       const message = createMockMessage()
       const phase1 = new Phase(phaseForm, phaseFunc)
       const phase2 = new Phase(phaseForm, phaseFunc)
@@ -145,18 +183,26 @@ describe('Unit::PhaseRunner', () => {
           message: createMockMessage()
         })
       })
-
-      const spy = jest.spyOn(PhaseRunner, 'execute')
-      await PhaseRunner.execute(phase1, message, () => new EventEmitter())
-      expect(spy).toHaveBeenCalledTimes(3)
+      const runner = new PhaseRunner()
+      await runner.execute(phase1, message, () => new EventEmitter())
+      expect(runner.ran).toEqual([phase1, phase2, phase3])
     })
-    it('does not call phase collect for phase with no children', async () => {
+  })
+  describe('static run', () => {
+    it('runs the created phase runner', async () => {
       const message = createMockMessage()
       const phase = new Phase(phaseForm, phaseFunc)
       phase.children = []
-      const spy = jest.spyOn(phase, 'collect')
-      await PhaseRunner.execute(phase, message, () => new EventEmitter())
-      expect(spy).not.toHaveBeenCalled()
+      const spy = jest.spyOn(PhaseRunner.prototype, 'run')
+      await PhaseRunner.run(phase, message, () => new EventEmitter())
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+    it('returns the PhaseRunner', async () => {
+      const message = createMockMessage()
+      const phase = new Phase(phaseForm, phaseFunc)
+      phase.children = []
+      const returned = await PhaseRunner.run(phase, message, () => new EventEmitter())
+      expect(returned).toBeInstanceOf(PhaseRunner)
     })
   })
 })
