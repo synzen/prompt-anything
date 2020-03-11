@@ -4,6 +4,7 @@ import { MessageInterface } from './types/discord'
 
 export class PhaseRunner {
   readonly ran: Array<Phase> = []
+  
   /**
    * Checks whether the tree of phases is valid. A valid tree
    * is one all children has a condition if there 2 or more
@@ -23,6 +24,17 @@ export class PhaseRunner {
       }
     }
     return true
+  }
+
+  /**
+   * Returns the indices of phaes that have been executed by
+   * this PhaseRunner already
+   * 
+   * @param phases - Phases to check index of
+   * @returns {Array<number>} - Array of indices
+   */
+  indexesOf (phases: Array<Phase>): Array<number> {
+    return phases.map(phase => this.ran.indexOf(phase))
   }
 
   /**

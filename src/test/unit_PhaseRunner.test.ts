@@ -205,4 +205,17 @@ describe('Unit::PhaseRunner', () => {
       expect(returned).toBeInstanceOf(PhaseRunner)
     })
   })
+  describe('indexesOf', () => {
+    it('returns the indices of phases', () => {
+      const phase1 = new Phase(phaseForm, phaseFunc)
+      const phase2 = new Phase(phaseForm, phaseFunc)
+      const phase3 = new Phase(phaseForm, phaseFunc)
+      const runner = new PhaseRunner()
+      Object.defineProperty(runner, 'ran', {
+        value: [phase2, phase3, phase1]
+      })
+      expect(runner.indexesOf([phase1, phase2, phase3]))
+        .toEqual([2, 0, 1])
+    })
+  })
 })

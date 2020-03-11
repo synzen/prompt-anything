@@ -71,6 +71,9 @@ describe('Unit::PhaseRunner', () => {
       expect(spies[3]).toHaveBeenCalledTimes(1)
       expect(spies[4]).not.toHaveBeenCalled()
       expect(spies[5]).not.toHaveBeenCalled()
+      expect(runner.indexesOf(phases)).toEqual([
+        0, -1, 1, 2, 3, -1
+      ])
     })
   })
   describe('run', () => {
@@ -93,6 +96,9 @@ describe('Unit::PhaseRunner', () => {
       await flushPromises()
       emitter.emit('accept', createMockMessage(), {})
       await promise
+      expect(runner.indexesOf([phase, phaseC1, phaseC2, phaseC21])).toEqual([
+        0, -1, 1, 2
+      ])
     })
   })
 })
