@@ -1,21 +1,21 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { FormatGenerator, PhaseFunction, PhaseCondition, PhaseData, PhaseReturnData, PhaseCollectorCreator } from './types/phase';
+import { FormatGenerator, PhaseFunction, PhaseCondition, PhaseReturnData, PhaseCollectorCreator } from './types/phase';
 import { MessageInterface } from './types/discord';
 
-export class Phase extends TreeNode<Phase> {
-  formatGenerator: FormatGenerator
+export class Phase<T> extends TreeNode<Phase<T>> {
+  formatGenerator: FormatGenerator<T>
   readonly duration: number
   readonly messages: Array<MessageInterface> = []
-  readonly function?: PhaseFunction
-  readonly condition?: PhaseCondition
+  readonly function?: PhaseFunction<T>
+  readonly condition?: PhaseCondition<T>
   public static STRINGS = {
     exit: `Menu has been closed.`,
     inactivity: 'Menu has been closed due to inactivity.',
     rejected: `That is not a valid input. Try again.`
   }
 
-  constructor(formatGenerator: FormatGenerator, f?: PhaseFunction, condition?: PhaseCondition, duration = 60000) {
+  constructor(formatGenerator: FormatGenerator<T>, f?: PhaseFunction<T>, condition?: PhaseCondition<T>, duration = 60000) {
     super()
     this.formatGenerator = formatGenerator
     this.duration = duration
@@ -28,7 +28,7 @@ export class Phase extends TreeNode<Phase> {
    * 
    * @param message - The MessageInterface before this phase
    */
-  async sendMessage (message: MessageInterface, data: PhaseData): Promise<MessageInterface|null> {
+  async sendMessage (message: MessageInterface, data?: T): Promise<MessageInterface|null> {
     const { channel } = message
     const { text, embed } = this.formatGenerator(message, data)
     if (text) {
@@ -52,11 +52,11 @@ export class Phase extends TreeNode<Phase> {
    * @param message - The MessageInterface before this phase
    * @param data - The data before this phase
    */
-  getNext (message: MessageInterface, data: PhaseData = {}): Phase|null {
+  async getNext (message: MessageInterface, data?: T): Promise<Phase<T>|null> {
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
-      if (!child.condition || child.condition(message, data)) {
+      if (!child.condition || await child.condition(message, data)) {
         return child
       }
     }
@@ -74,7 +74,7 @@ export class Phase extends TreeNode<Phase> {
    * @param message - The MessageInterface before this phase
    * @param data - The data before this phase
    */
-  collect (message: MessageInterface, createCollector: PhaseCollectorCreator, data: PhaseData = {}): Promise<PhaseReturnData> {
+  collect (message: MessageInterface, createCollector: PhaseCollectorCreator<T>, data?: T): Promise<PhaseReturnData<T>> {
     const channel = message.channel
     return new Promise((resolve, reject) => {
       if (!this.function) {
@@ -109,7 +109,7 @@ export class Phase extends TreeNode<Phase> {
         terminate(Phase.STRINGS.exit)
           .catch(reject)
       })
-      collector.once('accept', (acceptMessage: MessageInterface, acceptData: PhaseData): void => {
+      collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
         this.storeMessage(acceptMessage)
         resolve({
           message: acceptMessage,

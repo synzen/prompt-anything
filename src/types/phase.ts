@@ -1,25 +1,19 @@
 import { MessageInterface, Embed, PhaseCollectorInterface } from './discord'
 
-export type PhaseData = Record<string, unknown>
-
-export type PhaseReturnData = {
-  data: PhaseData;
+export type PhaseReturnData<T> = {
+  data?: T;
   message: MessageInterface;
 }
 
-export type PhaseFunction = (m: MessageInterface, data: PhaseData) => Promise<PhaseData>
+export type PhaseFunction<T> = (m: MessageInterface, data?: T) => Promise<T>
 
-export type PhaseCollectorCreator = (message: MessageInterface, func: PhaseFunction, data: PhaseData, duration: number) => PhaseCollectorInterface
+export type PhaseCollectorCreator<T> = (message: MessageInterface, func: PhaseFunction<T>, data?: T, duration?: number) => PhaseCollectorInterface
 
 export type Format = {
   text?: string;
   embed?: Embed;
 }
 
-export type FormatGenerator = (m: MessageInterface, data: PhaseData) => Format
+export type FormatGenerator<T> = (m: MessageInterface, data?: T) => Format
 
-export interface PhaseValidation {
-  (m: MessageInterface, data: PhaseData): boolean;
-}
-
-export type PhaseCondition = (m: MessageInterface, data: PhaseData) => boolean;
+export type PhaseCondition<T> = (m: MessageInterface, data?: T) => Promise<boolean>;

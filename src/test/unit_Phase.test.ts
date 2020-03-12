@@ -1,5 +1,5 @@
 import { Phase } from "../Phase"
-import { Format, PhaseData, PhaseCollectorCreator } from "../types/phase"
+import { Format, PhaseCollectorCreator } from "../types/phase"
 import { PhaseCollectorInterface } from '../types/discord'
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
@@ -41,8 +41,8 @@ describe('Unit::Phase', () => {
   const phaseVis = (): Format => ({
     text: 'foobar'
   })
-  const phaseFunc = async (): Promise<PhaseData> => ({})
-  const phaseCond = (): boolean => false
+  const phaseFunc = async (): Promise<{}> => ({})
+  const phaseCond = async (): Promise<boolean> => false
   it('initializes correctly', () => {
     const duration = 234
     const phase = new Phase(phaseVis, phaseFunc, phaseCond, duration)
@@ -106,56 +106,59 @@ describe('Unit::Phase', () => {
     })
   })
   describe('getNext', () => {
-    it('returns the right child', () => {
+    it('returns the right child', async () => {
       const phase = new Phase(phaseVis, phaseFunc)
       const phaseC1 = new Phase(phaseVis, phaseFunc)
       const phaseC2 = new Phase(phaseVis, phaseFunc)
       const phaseC3 = new Phase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2, phaseC3]
       Object.defineProperty(phaseC1, 'condition', {
-        value: () => false
+        value: async () => false
       })
       Object.defineProperty(phaseC2, 'condition', {
-        value: () => true
+        value: async () => true
       })
       Object.defineProperty(phaseC3, 'condition', {
-        value: () => true
+        value: async () => true
       })
       const message = createMockMessage()
-      expect(phase.getNext(message)).toEqual(phaseC2)
+      await expect(phase.getNext(message))
+        .resolves.toEqual(phaseC2)
     })
-    it('returns null for no elgiible children', () => {
+    it('returns null for no elgiible children', async () => {
       const phase = new Phase(phaseVis, phaseFunc)
       const phaseC1 = new Phase(phaseVis, phaseFunc)
       const phaseC2 = new Phase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2]
       Object.defineProperty(phaseC1, 'condition', {
-        value: () => false
+        value: async () => false
       })
       Object.defineProperty(phaseC2, 'condition', {
-        value: () => false
+        value: async () => false
       })
       const message = createMockMessage()
-      expect(phase.getNext(message)).toEqual(null)
+      await expect(phase.getNext(message))
+        .resolves.toEqual(null)
     })
-    it('returns one with no condition if it exists', () => {
+    it('returns one with no condition if it exists', async () => {
       const phase = new Phase(phaseVis, phaseFunc)
       const phaseC1 = new Phase(phaseVis, phaseFunc)
       const phaseC2 = new Phase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2]
       Object.defineProperty(phaseC1, 'condition', {
-        value: () => false
+        value: async () => false
       })
       const message = createMockMessage()
-      expect(phase.getNext(message)).toEqual(phaseC2)
+      await expect(phase.getNext(message))
+        .resolves.toEqual(phaseC2)
     })
   })
   describe('run', () => {
     let emitter: EventEmitter
-    let phase: Phase
+    let phase: Phase<object>
     let terminateSpy: jest.SpyInstance
     let message: MockMessage
-    let emitterCreator: PhaseCollectorCreator
+    let emitterCreator: PhaseCollectorCreator<{}>
     beforeEach(() => {
       emitter = new EventEmitter()
       phase = new Phase(phaseVis, phaseFunc)
@@ -164,7 +167,7 @@ describe('Unit::Phase', () => {
       emitterCreator = (): PhaseCollectorInterface => emitter
     })
     it('resolves with original message and data if no phase function', async () => {
-      const phaseNoFunc = new Phase(phaseVis)
+      const phaseNoFunc = new Phase<{}>(phaseVis)
       const data = {
         foo: 'bar'
       }
