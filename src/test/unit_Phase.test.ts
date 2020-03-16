@@ -164,7 +164,7 @@ describe('Unit::Phase', () => {
       phase = new Phase(phaseVis, phaseFunc)
       message = createMockMessage()
       terminateSpy = jest.spyOn(phase, 'terminateHere').mockReturnValue()
-      emitterCreator = (): PhaseCollectorInterface => emitter
+      emitterCreator = (): PhaseCollectorInterface<{}> => emitter
     })
     it('resolves with original message and data if no phase function', async () => {
       const phaseNoFunc = new Phase<{}>(phaseVis)
