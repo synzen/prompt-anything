@@ -7,7 +7,7 @@
 A work-in-progress framework for Discord JS libraries for building a series of interactable prompts (or menus) in a chat-like fashio with an N-ary tree structure. Each phase is a tree node with a user-specified `n` number of children with optional conditions to decide which branch the dialogue should continue through to.
 
 ## Example
-```js
+```ts
 type AgePhaseData = {
   name: string;
   age: number;
