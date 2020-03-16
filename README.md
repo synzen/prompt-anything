@@ -8,39 +8,44 @@ A work-in-progress framework for Discord JS libraries for building a series of i
 
 ## Example
 ```js
+type AgePhaseData = {
+  name: string;
+  age: number;
+}
+
 // Ask name phase that collects messages
-const askNameFn = async function (m, data) {
+const askNameFn: PhaseFunction<AgePhaseData> = async function (m, data) {
   data.name = m.content
   return data
 }
-const askName = new Phase(() => ({
-  text: `What's your name?`
+const askName = new Phase<AgePhaseData>(() => ({
+  text: `What's your name?`,
+  embed: {
+    title: 'Tell me your name'
+  }
 }), askNameFn)
 
 // Ask age phase that collects messages
-const askAgeFn = async function (m, data) {
+const askAgeFn: PhaseFunction<AgePhaseData> = async function (m, data) {
   if (isNaN(Number(m.content))) {
-    // Send a rejection message and continue collecting
     throw new PhaseErrors.Rejection()
   }
   data.age = Number(m.content)
   return data
 }
-const askAge = new Phase((m, data) => ({
+const askAge = new Phase<AgePhaseData>((m, data) => ({
   text: `How old are you, ${data.name}?`
 }), askAgeFn)
 
 // Conditional phase with no collector
-const tooOld = new Phase((m, data) => ({
+const tooOld = new Phase<AgePhaseData>((m, data) => ({
   text: `Wow ${data.name}, you are pretty old at ${data.age} years old!`
-}), undefined, (m, data) => data.age >= 20)
+}), undefined, async (m, data) => data.age > 20)
 
 // Conditional phase with no collector
-const tooYoung = new Phase((m, data) => ({
-
+const tooYoung = new Phase<AgePhaseData>((m, data) => ({
   text: `Wow ${data.name}, you are pretty young at ${data.age} years old!`
-}), undefined, (m, data) => data.age < 20)
-
+}), undefined, async (m, data) => data.age <= 20)
 
 askName.setChildren([askAge])
 // Nodes with more than 1 sibling must have conditions defined
@@ -71,23 +76,23 @@ interface MessageInterface {
 ```
 The `PhaseCollectorCreator` must be implemented as a function that returns `PhaseCollectorInterface`. The `PhaseCollectorCreator` is then passed to `PhaseRunner`.
 ```ts
-type PhaseCollectorCreator = (
+type PhaseCollectorCreator<T> = (
   message: MessageInterface,
-  func: PhaseFunction,
-  data: PhaseData,
-  duration: number
-) => PhaseCollectorInterface
+  func: PhaseFunction<T>,
+  data?: T,
+  duration?: number
+) => PhaseCollectorInterface<T>
 
 // The collector has 5 events to emit: 'reject', 'accept', 'exit', 'inactivity', 'exit'
 interface PhaseCollectorInterface extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
-  emit(event: 'accept', message: MessageInterface, data: PhaseData): boolean;
+  emit(event: 'accept', message: MessageInterface, data: T): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
   emit(event: 'inactivity'): boolean;
   emit(event: 'error', message: MessageInterface, error: Error): boolean;
 
   on(event: 'reject', listener: (message: MessageInterface, error: Rejection) => void): this;
-  once(event: 'accept', listener: (message: MessageInterface, data: PhaseData) => void): this;
+  once(event: 'accept', listener: (message: MessageInterface, data: T) => void): this;
   once(event: 'exit', listener: (message: MessageInterface) => void): this;
   once(event: 'inactivity', listener: () => void): this;
   once(event: 'error', listener: (message: MessageInterface, error: Error) => void): this;
@@ -98,7 +103,7 @@ interface PhaseCollectorInterface extends EventEmitter {
 
 Unit testing is straightforward since the tree of responses is built up from individual phases (or nodes) represented by functions that can be exported for testing.
 
-Integration testing still needs to be more robust. As of now (using the previous example), a trivial test could be:
+Integration testing can be asserted on the execution order of the phases.
 ```ts
 async function flushPromises(): Promise<void> {
   return new Promise(setImmediate);
@@ -129,19 +134,22 @@ it('runs correctly for age <= 20', () => {
   const emitter = new EventEmitter()
   const name = 'George'
   const age = '30'
-  const promise = PhaseRunner.run(askName, message, () => emitter)
+  const runner = new PhaseRunner<PhaseData>()
+  const promise = runner.run(askName, message, () => emitter)
   // Wait for all pending promise callbacks to be executed for the emitter to set up
   await flushPromises()
-  emitter.emit('accept', createMockMessage(name), {})
-  // Wait for all pending promise callbacks to be executed for message to be accepted
-  await flushPromises()
-  emitter.emit('accept', createMockMessage(age), {
+  // Accept the name
+  emitter.emit('accept', createMockMessage(name), {
     name
   })
-  const result = await promise
-  expect(result.data).toEqual({
-    name,
-    age: Number(age)
+  // Wait for all pending promise callbacks to be executed for message to be accepted
+  await flushPromises()
+  // Accept the age
+  emitter.emit('accept', createMockMessage(age), {
+    age
   })
+  await promise
+  expect(runner.indexesOf([askName, askAge, tooOld, tooYoung]))
+    .toEqual([0, 1, 2, -1])
 })
 ```
