@@ -7,7 +7,12 @@ export type PhaseReturnData<T> = {
 
 export type PhaseFunction<T> = (m: MessageInterface, data?: T) => Promise<T>
 
-export type PhaseCollectorCreator<T> = (message: MessageInterface, func: PhaseFunction<T>, data?: T, duration?: number) => PhaseCollectorInterface<T>
+export type PhaseCollectorCreator<T> = (
+  message: MessageInterface,
+  func: PhaseFunction<T>,
+  data?: T,
+  duration?: number
+) => PhaseCollectorInterface<T>
 
 export type Format = {
   text?: string;
