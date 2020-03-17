@@ -153,6 +153,7 @@ describe('Unit::PhaseRunner', () => {
       const promise = runner.run(askName, message, () => emitter)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
+      expect(runner.indexOf(askName)).toEqual(0)
       // Accept the name
       emitter.emit('accept', createMockMessage(name), {
         name
@@ -160,12 +161,13 @@ describe('Unit::PhaseRunner', () => {
       // Wait for all pending promise callbacks to be executed for message to be accepted
       // Accept the age
       await flushPromises()
+      expect(runner.indexOf(askAge)).toEqual(1)
       emitter.emit('accept', createMockMessage(age), {
         age
       })
       await promise
-      expect(runner.indexesOf([askName, askAge, tooOld, tooYoung]))
-        .toEqual([0, 1, 2, -1])
+      expect(runner.indexesOf([tooOld, tooYoung]))
+        .toEqual([2, -1])
     })
   })
 })
