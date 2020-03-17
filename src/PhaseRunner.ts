@@ -27,14 +27,24 @@ export class PhaseRunner<T> {
   }
 
   /**
-   * Returns the indices of phaes that have been executed by
+   * Returns the index of a phase that have been executed
+   * by this PhaseRunner already
+   * 
+   * @param phase 
+   */
+  indexOf (phase: Phase<T>): number {
+    return this.ran.indexOf(phase)
+  }
+
+  /**
+   * Returns the indexes of phases that have been executed by
    * this PhaseRunner already
    * 
    * @param phases - Phases to check index of
    * @returns {Array<number>} - Array of indices
    */
   indexesOf (phases: Array<Phase<T>>): Array<number> {
-    return phases.map(phase => this.ran.indexOf(phase))
+    return phases.map(phase => this.indexOf(phase))
   }
 
   /**

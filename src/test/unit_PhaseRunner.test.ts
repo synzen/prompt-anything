@@ -209,7 +209,7 @@ describe('Unit::PhaseRunner', () => {
     })
   })
   describe('indexesOf', () => {
-    it('returns the indices of phases', () => {
+    it('calls indexOf', () => {
       const phase1 = new Phase(phaseForm, phaseFunc)
       const phase2 = new Phase(phaseForm, phaseFunc)
       const phase3 = new Phase(phaseForm, phaseFunc)
@@ -217,8 +217,26 @@ describe('Unit::PhaseRunner', () => {
       Object.defineProperty(runner, 'ran', {
         value: [phase2, phase3, phase1]
       })
-      expect(runner.indexesOf([phase1, phase2, phase3]))
-        .toEqual([2, 0, 1])
+      const spy = jest.spyOn(runner, 'indexOf')
+        .mockReturnValue(1)
+      runner.indexesOf([phase1, phase2, phase3])
+      expect(spy).toHaveBeenCalledTimes(3)
+      expect(spy).toHaveBeenCalledWith(phase1)
+      expect(spy).toHaveBeenCalledWith(phase2)
+      expect(spy).toHaveBeenCalledWith(phase3)
+    })
+  })
+  describe('indexOf', () => {
+    it('returns the index of the phase', () => {
+      const phase1 = new Phase(phaseForm, phaseFunc)
+      const phase2 = new Phase(phaseForm, phaseFunc)
+      const phase3 = new Phase(phaseForm, phaseFunc)
+      const runner = new PhaseRunner<{}>()
+      Object.defineProperty(runner, 'ran', {
+        value: [phase2, phase3, phase1]
+      })
+      expect(runner.indexOf(phase1))
+        .toEqual(2)
     })
   })
 })
