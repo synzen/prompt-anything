@@ -71,8 +71,8 @@ export class PhaseRunner<T> {
    */
   async execute (initialPhase: Phase<T>, message: MessageInterface, collectorCreator: PhaseCollectorCreator<T>, initialData?: T): Promise<void> {
     this.ran.push(initialPhase)
-    await initialPhase.sendMessage(message, initialData)
     let thisPhase: Phase<T>|null = initialPhase
+    await thisPhase.sendMessage(message, initialData)
     while (thisPhase && thisPhase.children.length > 0) {
       const {
         data: phaseData,
@@ -83,6 +83,7 @@ export class PhaseRunner<T> {
       } = await thisPhase.collect(message, collectorCreator, initialData)
       thisPhase = await thisPhase.getNext(phaseMessage, phaseData)
       if (thisPhase) {
+        await thisPhase.sendMessage(phaseMessage, phaseData)
         this.ran.push(thisPhase)
       }
     }

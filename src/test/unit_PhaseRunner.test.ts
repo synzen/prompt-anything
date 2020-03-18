@@ -15,7 +15,7 @@ type MockMessage = {
   content: string;
 }
 
-const createMockMessage = (): MockMessage => ({
+const createMockMessage = (content = ''): MockMessage => ({
   author: {
     id: '1'
   },
@@ -23,7 +23,7 @@ const createMockMessage = (): MockMessage => ({
     createMessageCollector: jest.fn(),
     send: jest.fn(() => Promise.resolve())
   },
-  content: ''
+  content: content
 })
 
 describe('Unit::PhaseRunner', () => {
@@ -131,6 +131,52 @@ describe('Unit::PhaseRunner', () => {
       const runner = new PhaseRunner<{}>()
       await runner.execute(phase, message, () => new EventEmitter(), data)
       expect(phaseSend).toHaveBeenCalledWith(message, data)
+    })
+    it('sends all phase messages', async () => {
+      const message = createMockMessage('initial message')
+      const phase1 = new Phase(phaseForm, phaseFunc)
+      const phase2 = new Phase(phaseForm, phaseFunc)
+      const phase3 = new Phase(phaseForm, phaseFunc)
+      jest.spyOn(phase1, 'getNext')
+        .mockResolvedValue(phase2)
+      jest.spyOn(phase2, 'getNext')
+        .mockResolvedValue(phase3)
+      jest.spyOn(phase3, 'getNext')
+        .mockResolvedValue(null)
+      const phases = [phase1, phase2, phase3]
+      const phasesCollectedMessages = [
+        createMockMessage('phase1 return'),
+        createMockMessage('phase2 return')
+      ]
+      const phasesCollectedData = [
+        { a: 1 },
+        { a: 2, b: 2 }
+      ]
+      const collectSpies = phases.map((p, index) => {
+        p.children = [new Phase(phaseForm, phaseFunc)]
+        jest.spyOn(p, 'collect').mockResolvedValue({
+          data: phasesCollectedData[index],
+          message: phasesCollectedMessages[index]
+        })
+        return jest.spyOn(p, 'sendMessage')
+      })
+      const runner = new PhaseRunner<{}>()
+      const initialData = {
+        a: 0
+      }
+      await runner.execute(phase1, message, () => new EventEmitter(), initialData)
+      expect(collectSpies[0]).toHaveBeenCalledWith(
+        message,
+        initialData
+      )
+      expect(collectSpies[1]).toHaveBeenCalledWith(
+        phasesCollectedMessages[0],
+        phasesCollectedData[0]
+      )
+      expect(collectSpies[2]).toHaveBeenCalledWith(
+        phasesCollectedMessages[1],
+        phasesCollectedData[1]
+      )
     })
     it('runs all phases', async () => {
       const message = createMockMessage()
