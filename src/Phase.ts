@@ -1,7 +1,30 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { FormatGenerator, PhaseFunction, PhaseCondition, PhaseReturnData, PhaseCollectorCreator } from './types/phase';
-import { MessageInterface } from './types/discord';
+import { MessageInterface, PhaseCollectorInterface, Embed } from './types/discord';
+
+export type PhaseReturnData<T> = {
+  data?: T;
+  message: MessageInterface;
+}
+
+export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data?: T) => Promise<T>
+
+export type PhaseCollectorCreator<T> = (
+  message: MessageInterface,
+  func: PhaseFunction<T>,
+  data?: T,
+  duration?: number
+) => PhaseCollectorInterface<T>
+
+export type Format = {
+  text?: string;
+  embed?: Embed;
+}
+
+export type FormatGenerator<T> = (m: MessageInterface, data?: T) => Format
+
+export type PhaseCondition<T> = (m: MessageInterface, data?: T) => Promise<boolean>;
+
 
 export class Phase<T> extends TreeNode<Phase<T>> {
   formatGenerator: FormatGenerator<T>

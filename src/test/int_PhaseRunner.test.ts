@@ -1,6 +1,5 @@
-import { Phase } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction, PhaseCondition } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
-import { FormatGenerator, PhaseFunction, PhaseCondition } from '../types/phase'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
 
@@ -31,7 +30,7 @@ const createMockMessage = (content = ''): MockMessage => ({
   content
 })
 
-describe('Unit::PhaseRunner', () => {
+describe('Int::PhaseRunner', () => {
   const phaseForm: FormatGenerator<{}> = () => ({
     text: '1',
     embed: {

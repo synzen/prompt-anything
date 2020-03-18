@@ -1,5 +1,4 @@
-import { Phase } from './Phase'
-import { PhaseCollectorCreator } from './types/phase'
+import { Phase, PhaseCollectorCreator } from './Phase'
 import { MessageInterface } from './types/discord'
 
 export class PhaseRunner<T> {

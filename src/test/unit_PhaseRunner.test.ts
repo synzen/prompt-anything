@@ -1,6 +1,5 @@
-import { Phase } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction, PhaseCollectorCreator } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
-import { FormatGenerator, PhaseFunction, PhaseCollectorCreator } from '../types/phase'
 import { EventEmitter } from "events"
 
 jest.mock('../Phase')
