@@ -1,5 +1,4 @@
-import { Phase } from "../Phase"
-import { Format, PhaseCollectorCreator } from "../types/phase"
+import { Phase, Format, PhaseCollectorCreator } from "../Phase"
 import { PhaseCollectorInterface } from '../types/discord'
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
