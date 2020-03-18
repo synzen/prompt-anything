@@ -1,6 +1,6 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { MessageInterface, PhaseCollectorInterface, Embed } from './types/discord';
+import { MessageInterface, PhaseCollectorInterface, Embed, ChannelInterface } from './types/discord';
 
 export type PhaseReturnData<T> = {
   data?: T;
@@ -65,8 +65,11 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   /**
    * Set all children to empty so there is no next phase.
    */
-  terminateHere (): void {
+  async terminateHere (channel: ChannelInterface, terminateString: string): Promise<MessageInterface> {
     this.setChildren([])
+    const sent = await channel.send(terminateString)
+    this.storeMessage(sent)
+    return sent
   }
 
   /**
@@ -110,9 +113,7 @@ export class Phase<T> extends TreeNode<Phase<T>> {
       const collector = createCollector(message, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
-        this.terminateHere()
-        const sent = await channel.send(terminateString)
-        this.storeMessage(sent)
+        const sent = await this.terminateHere(channel, terminateString)
         resolve({
           message: sent,
           data

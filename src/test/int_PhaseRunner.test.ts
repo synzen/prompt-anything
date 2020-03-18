@@ -9,7 +9,6 @@ async function flushPromises(): Promise<void> {
   });
 }
 
-
 type MockMessage = {
   author: {
     id: string;
