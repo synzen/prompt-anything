@@ -26,9 +26,9 @@ const createMockChannel = (): MockChannel => ({
   send: jest.fn(() => Promise.resolve())
 })
 
-const createMockMessage = (content = ''): MockMessage => ({
+const createMockMessage = (content = '', authorID = '1'): MockMessage => ({
   author: {
-    id: '1'
+    id: authorID
   },
   channel: createMockChannel(),
   content
@@ -59,80 +59,96 @@ describe('Unit::Phase', () => {
     })
   })
   describe('static handleMessage', () => {
-    it('emits exit if message is exit', async () => {
-      const message = createMockMessage('exit')
+    const authorID = '3w4ey5ru7t'
+    it('emits nothing if author does not match original', async () => {
+      const originalMessage = createMockMessage('', authorID + 'abc')
+      const message = createMockMessage('exit', authorID)
       const emitter = new EventEmitter()
-      const spy = jest.spyOn(emitter, 'emit')
-      const stopCollecting = await Phase.handleMessage(emitter, message, phaseFunc)
-      expect(spy).toHaveBeenCalledWith('exit', message)
+      const emit = jest.spyOn(emitter, 'emit')
+      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, phaseFunc)
+      expect(emit).not.toHaveBeenCalled()
+      expect(stopCollecting).toEqual(false)
+    })
+    it('emits exit if message is exit', async () => {
+      const originalMessage = createMockMessage('', authorID)
+      const message = createMockMessage('exit', authorID)
+      const emitter = new EventEmitter()
+      const emit = jest.spyOn(emitter, 'emit')
+      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, phaseFunc)
+      expect(emit).toHaveBeenCalledWith('exit', message)
       expect(stopCollecting).toEqual(true)
     })
     it('emits accept if no error is thrown in func', async () => {
-      const message = createMockMessage('rfdeh')
+      const originalMessage = createMockMessage('', authorID)
+      const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
-      const spy = jest.spyOn(emitter, 'emit')
+      const emit = jest.spyOn(emitter, 'emit')
       const funcData = {
         fo: 'bar'
       }
       const thisPhaseFunc = async (): Promise<{}> => funcData
-      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
-      expect(spy).toHaveBeenCalledWith('accept', message, funcData)
+      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      expect(emit).toHaveBeenCalledWith('accept', message, funcData)
       expect(stopCollecting).toEqual(true)
     })
     it('emits reject if func error is a Rejection', async () => {
-      const message = createMockMessage('rfdeh')
+      const originalMessage = createMockMessage('', authorID)
+      const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
-      const spy = jest.spyOn(emitter, 'emit')
+      const emit = jest.spyOn(emitter, 'emit')
       const rejectError = new Rejection('sdge')
       const thisPhaseFunc = async (): Promise<{}> => {
         throw rejectError
       }
-      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
-      expect(spy).toHaveBeenCalledWith('reject', message, rejectError)
+      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      expect(emit).toHaveBeenCalledWith('reject', message, rejectError)
       expect(stopCollecting).toEqual(false)
     })
     it('emits error if func error is not Rejection', async () => {
-      const message = createMockMessage('rfdeh')
+      const originalMessage = createMockMessage('', authorID)
+      const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
       // Node always requires an error listener if it emits error
       emitter.on('error', () => {
         return 1
       })
-      const spy = jest.spyOn(emitter, 'emit')
+      const emit = jest.spyOn(emitter, 'emit')
       const error = new Error('sdge')
       const thisPhaseFunc = async (): Promise<{}> => {
         throw error
       }
-      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
-      expect(spy).toHaveBeenCalledWith('error', message, error)
+      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      expect(emit).toHaveBeenCalledWith('error', message, error)
       expect(stopCollecting).toEqual(true)
     })
   })
   describe('handleCollector', () => {
+    const authorID = '1'
     beforeEach(() => {
       jest.useFakeTimers()
     })
     it('calls handleMessage for every message', async () => {
       const emitter = new EventEmitter()
-      const message = createMockMessage()
-      const message2 = createMockMessage()
+      const originalMessage = createMockMessage('', authorID)
+      const message = createMockMessage('', authorID)
+      const message2 = createMockMessage('', authorID)
       const data = {
         foo: 'bar'
       }
       const handleMessage = jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(emitter, phaseFunc, data)
+      Phase.handleCollector(originalMessage, emitter, phaseFunc, data)
       emitter.emit('message', message)
       emitter.emit('message', message2)
       await flushPromises()
-      expect(handleMessage).toHaveBeenCalledWith(emitter, message, phaseFunc, data)
-      expect(handleMessage).toHaveBeenCalledWith(emitter, message2, phaseFunc, data)
+      expect(handleMessage).toHaveBeenCalledWith(emitter, originalMessage, message, phaseFunc, data)
+      expect(handleMessage).toHaveBeenCalledWith(emitter, originalMessage, message2, phaseFunc, data)
     })
     it('emits stop if handleMessage returns true to stop collection', async () => {
       const emitter = new EventEmitter()
       const message = createMockMessage()
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(true)
       const emit = jest.spyOn(emitter, 'emit')
-      Phase.handleCollector(emitter, phaseFunc)
+      Phase.handleCollector(createMockMessage(), emitter, phaseFunc)
       emitter.emit('message', message)
       await flushPromises()
       expect(emit).toHaveBeenCalledWith('stop')
@@ -145,7 +161,7 @@ describe('Unit::Phase', () => {
       }
       const duration = 9423
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(emitter, phaseFunc, data, duration)
+      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), duration)
     })
     it('does not call settimeout if no duration', () => {
@@ -155,7 +171,7 @@ describe('Unit::Phase', () => {
       }
       const duration = undefined
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(emitter, phaseFunc, data, duration)
+      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
       expect(setTimeout).not.toHaveBeenCalled()
     })
     it('emits stop and inactivity if timeout runs', () => {
@@ -166,7 +182,7 @@ describe('Unit::Phase', () => {
       const duration = 9423
       const emit = jest.spyOn(emitter, 'emit')
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(emitter, phaseFunc, data, duration)
+      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
       jest.runOnlyPendingTimers()
       expect(emit).toHaveBeenCalledWith('stop')
       expect(emit).toHaveBeenCalledWith('inactivity')

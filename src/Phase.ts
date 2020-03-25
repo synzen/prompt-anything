@@ -63,12 +63,13 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   /**
    * Handles timeout and messages of a message colllector
    * 
+   * @param originalMessage The original message
    * @param emitter Message collector
    * @param func Phase function
    * @param data Phase data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<T> (emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
+  static handleCollector<T> (originalMessage: MessageInterface, emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -77,7 +78,7 @@ export class Phase<T> extends TreeNode<Phase<T>> {
       }, duration)
     }
     emitter.on('message', async thisMessage => {
-      const stopCollecting = await this.handleMessage(emitter, thisMessage, func, data)
+      const stopCollecting = await this.handleMessage(emitter, originalMessage, thisMessage, func, data)
       if (stopCollecting) {
         emitter.emit('stop')
         clearTimeout(timer)
@@ -87,14 +88,19 @@ export class Phase<T> extends TreeNode<Phase<T>> {
 
   /**
    * Handle each individual message from a collector to determine
-   * what event it should emit
+   * what event it should emit. Ignores all messages whose author
+   * ID does not match the original message.
    * 
    * @param emitter Message collector
+   * @param originalMessage Original message
    * @param message Collected message
    * @param func Phase function
    * @param data Phase data
    */
-  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, message: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
+  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, originalMessage: MessageInterface, message: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
+    if (originalMessage.author.id !== message.author.id) {
+      return false
+    }
     if (message.content === 'exit') {
       emitter.emit('exit', message)
       return true
@@ -194,7 +200,7 @@ export class Phase<T> extends TreeNode<Phase<T>> {
         return
       }
       const collector: PhaseCollectorInterface<T> =  createCollector(message)
-      Phase.handleCollector(collector, this.function.bind(this), data, this.duration)
+      Phase.handleCollector(message, collector, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
         const sent = await this.terminateHere(channel, terminateString)
