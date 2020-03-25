@@ -37,13 +37,13 @@ const askAge = new Phase<AgePhaseData>((m, data) => ({
   text: `How old are you, ${data.name}?`
 }), askAgeFn)
 
-// Conditional phase with no collector
-const tooOld = new Phase<AgePhaseData>((m, data) => ({
+// Conditional phase with no collector (EndPhase)
+const tooOld = new EndPhase<AgePhaseData>((m, data) => ({
   text: `Wow ${data.name}, you are pretty old at ${data.age} years old!`
 }), undefined, async (m, data) => data.age > 20)
 
-// Conditional phase with no collector
-const tooYoung = new Phase<AgePhaseData>((m, data) => ({
+// Conditional phase with no collector (EndPhase)
+const tooYoung = new EndPhase<AgePhaseData>((m, data) => ({
   text: `Wow ${data.name}, you are pretty young at ${data.age} years old!`
 }), undefined, async (m, data) => data.age <= 20)
 
