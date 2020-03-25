@@ -51,15 +51,9 @@ describe('Unit::Phase', () => {
     expect(phase.duration).toEqual(duration)
   })
   describe('shouldRunCollector', () => {
-    it('returns true if there are children', () => {
+    it('returns true', () => {
       const phase = new Phase(phaseVis, phaseFunc)
-      phase.children = [new Phase(phaseVis, phaseFunc)]
       expect(phase.shouldRunCollector()).toEqual(true)  
-    })
-    it('returns false if no children', () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      phase.children = []
-      expect(phase.shouldRunCollector()).toEqual(false)
     })
   })
   describe('sendMessage', () => {

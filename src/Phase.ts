@@ -50,7 +50,7 @@ export class Phase<T> extends TreeNode<Phase<T>> {
    * If this Phase should collect messages
    */
   shouldRunCollector (): boolean {
-    return this.children.length > 0
+    return true
   }
 
   /**
