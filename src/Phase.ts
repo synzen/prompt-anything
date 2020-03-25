@@ -1,6 +1,7 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { MessageInterface, PhaseCollectorInterface, Embed, ChannelInterface } from './types/discord';
+import { MessageInterface, Embed, ChannelInterface } from './types/discord';
+import { EventEmitter } from 'events';
 
 export type PhaseReturnData<T> = {
   data?: T;
@@ -9,11 +10,25 @@ export type PhaseReturnData<T> = {
 
 export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data?: T) => Promise<T>
 
+export interface PhaseCollectorInterface<T> extends EventEmitter {
+  emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
+  emit(event: 'accept', message: MessageInterface, data: T): boolean;
+  emit(event: 'exit', message: MessageInterface): boolean;
+  emit(event: 'inactivity'): boolean;
+  emit(event: 'error', message: MessageInterface, error: Error): boolean;
+  emit(event: 'message', message: MessageInterface): boolean;
+  emit(event: 'stop'): boolean;
+  on(event: 'message', listener: (message: MessageInterface) => void): this;
+  on(event: 'reject', listener: (message: MessageInterface, error: Rejection) => void): this;
+  once(event: 'accept', listener: (message: MessageInterface, data: T) => void): this;
+  once(event: 'exit', listener: (message: MessageInterface) => void): this;
+  once(event: 'inactivity', listener: () => void): this;
+  once(event: 'error', listener: (message: MessageInterface, error: Error) => void): this;
+  once(event: 'stop', listener: () => void): this;
+}
+
 export type PhaseCollectorCreator<T> = (
-  message: MessageInterface,
-  func: PhaseFunction<T>,
-  data?: T,
-  duration?: number
+  message: MessageInterface
 ) => PhaseCollectorInterface<T>
 
 export type Format = {
@@ -24,7 +39,6 @@ export type Format = {
 export type FormatGenerator<T> = (m: MessageInterface, data?: T) => Format
 
 export type PhaseCondition<T> = (m: MessageInterface, data?: T) => Promise<boolean>;
-
 
 export class Phase<T> extends TreeNode<Phase<T>> {
   formatGenerator: FormatGenerator<T>
@@ -44,6 +58,46 @@ export class Phase<T> extends TreeNode<Phase<T>> {
     this.duration = duration
     this.function = f
     this.condition = condition
+  }
+
+  static handleCollector<T> (emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
+    let timer: NodeJS.Timeout
+    if (duration) {
+      timer = setTimeout(() => {
+        emitter.emit('stop')
+        emitter.emit('inactivity')
+      }, duration)
+    }
+    emitter.on('message', async thisMessage => {
+      const stopCollecting = await this.handleMessage(emitter, thisMessage, func, data)
+      if (stopCollecting) {
+        emitter.emit('stop')
+        clearTimeout(timer)
+      }
+    })
+  }
+
+  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, thisMessage: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
+    if (thisMessage.content === 'exit') {
+      emitter.emit('exit', thisMessage)
+      return true
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
+      const newData = await func(thisMessage, data)
+      emitter.emit('accept', thisMessage, newData)
+      return true
+    } catch (err) {
+      if (err instanceof Rejection) {
+        // Don't stop collector since rejects can be tried again
+        emitter.emit('reject', thisMessage, err)
+        return false
+      } else {
+        emitter.emit('error', thisMessage, err)
+        return true
+      }
+    }
   }
 
   /**
@@ -117,7 +171,8 @@ export class Phase<T> extends TreeNode<Phase<T>> {
         })
         return
       }
-      const collector = createCollector(message, this.function.bind(this), data, this.duration)
+      const collector: PhaseCollectorInterface<T> =  createCollector(message)
+      Phase.handleCollector(collector, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
         const sent = await this.terminateHere(channel, terminateString)

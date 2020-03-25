@@ -1,8 +1,7 @@
-import { Phase, FormatGenerator, PhaseFunction, PhaseCondition } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction, PhaseCondition, PhaseCollectorInterface } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
-import { MessageInterface, PhaseCollectorInterface } from "../types/discord";
 import { EndPhase } from "../EndPhase";
 
 async function flushPromises(): Promise<void> {
@@ -111,17 +110,18 @@ describe('Int::PhaseRunner', () => {
       phaseC2.children = [phaseC21]
       phaseC21.children = []
 
-      const emitter = new EventEmitter()
+      const emitter: PhaseCollectorInterface<{}> = new EventEmitter()
       const runner = new PhaseRunner<{}>()
       const promise = runner.run(phase, message, () => emitter)
       await flushPromises()
-      emitter.emit('accept', createMockMessage(), {})
+      emitter.emit('message', createMockMessage())
+      expect(runner.indexOf(phase)).toEqual(0)
       await flushPromises()
-      emitter.emit('accept', createMockMessage(), {})
+      emitter.emit('message', createMockMessage())
+      expect(runner.indexOf(phaseC1)).toEqual(-1)
+      expect(runner.indexOf(phaseC2)).toEqual(1)
       await promise
-      expect(runner.indexesOf([phase, phaseC1, phaseC2, phaseC21])).toEqual([
-        0, -1, 1, 2
-      ])
+      expect(runner.indexOf(phaseC21)).toEqual(2)
     })
     it('works with custom functions', async () => {
       type PhaseData = {
@@ -168,25 +168,21 @@ describe('Int::PhaseRunner', () => {
       askAge.setChildren([tooOld, tooYoung])
       
       const message = createMockMessage()
-      const emitter = new EventEmitter()
+      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
       const name = 'George'
       const age = '30'
       const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, message, () => emitter)
+      const promise = runner.run(askName, message, () => emitter, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
-      expect(runner.indexOf(askName)).toEqual(0)
       // Accept the name
-      emitter.emit('accept', createMockMessage(name), {
-        name
-      })
+      emitter.emit('message', createMockMessage(name))
+      expect(runner.indexOf(askName)).toEqual(0)
       // Wait for all pending promise callbacks to be executed for message to be accepted
-      // Accept the age
       await flushPromises()
+      // Accept the age
+      emitter.emit('message', createMockMessage(age))
       expect(runner.indexOf(askAge)).toEqual(1)
-      emitter.emit('accept', createMockMessage(age), {
-        age
-      })
       await promise
       expect(runner.indexesOf([tooOld, tooYoung]))
         .toEqual([2, -1])
@@ -244,32 +240,24 @@ describe('Int::PhaseRunner', () => {
       askAge.setChildren([tooOld, tooYoung])
       
       const message = createMockMessage()
-      const emitter = new EventEmitter()
+      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
       const name = 'George'
       const age = '30'
       const runner = new PhaseRunner<PhaseData>()
-      const collectorCreator = function (message: MessageInterface, func: PhaseFunction<PhaseData>, data?: PhaseData): PhaseCollectorInterface<PhaseData> {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-        // @ts-ignore
-        func(message, data)
+      const collectorCreator = function (): PhaseCollectorInterface<PhaseData> {
         return emitter
       }
       const promise = runner.run(askName, message, collectorCreator, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
-      // expect(runner.indexOf(askName)).toEqual(0)
-      expect(askNameFnSpy).toHaveBeenCalledTimes(1)
       // Accept the name
-      emitter.emit('accept', createMockMessage(name), {
-        name
-      })
+      emitter.emit('message', createMockMessage(name))
+      expect(askNameFnSpy).toHaveBeenCalledTimes(1)
       // Wait for all pending promise callbacks to be executed for message to be accepted
-      // Accept the age
       await flushPromises()
+      // Accept the age
+      emitter.emit('message', createMockMessage(age))
       expect(askAgeFnSpy).toHaveBeenCalledTimes(1)
-      emitter.emit('accept', createMockMessage(age), {
-        age
-      })
       await promise
       expect(tooOldFnSpy).toHaveBeenCalledTimes(1)
       expect(tooYoungFnSpy).not.toHaveBeenCalled()
@@ -319,11 +307,8 @@ describe('Int::PhaseRunner', () => {
       const askName = new Phase<PhaseData>(thisPhaseForm, askNameFn)
 
       const message = createMockMessage()
-      const emitter = new EventEmitter()
-      const collectorCreator = function (message: MessageInterface, func: PhaseFunction<PhaseData>, data?: PhaseData): PhaseCollectorInterface<PhaseData> {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-        // @ts-ignore
-        func(message, data)
+      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
+      const collectorCreator = function (): PhaseCollectorInterface<PhaseData> {
         return emitter
       }
       const name = 'George'
@@ -332,18 +317,14 @@ describe('Int::PhaseRunner', () => {
       const promise = runner.run(askName, message, collectorCreator, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
-      expect(runner.indexOf(askName)).toEqual(0)
       // Accept the name
-      emitter.emit('accept', createMockMessage(name), {
-        name
-      })
-      // // Wait for all pending promise callbacks to be executed for message to be accepted
-      // Accept the age
+      emitter.emit('message', createMockMessage(name))
+      expect(runner.indexOf(askName)).toEqual(0)
+      // Wait for all pending promise callbacks to be executed for message to be accepted
       await flushPromises()
+      // Accept the age
+      emitter.emit('message', createMockMessage(age))
       expect(runner.indexOf(askAge)).toEqual(1)
-      emitter.emit('accept', createMockMessage(age), {
-        age
-      })
       await promise
       expect(runner.indexesOf([tooOld, tooYoung]))
         .toEqual([2, -1])
