@@ -131,26 +131,25 @@ const createMockMessage = (content = ''): MockMessage => ({
 
 it('runs correctly for age <= 20', () => {
   const message = createMockMessage()
-  const emitter = new EventEmitter()
+  const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
   const name = 'George'
   const age = '30'
   const runner = new PhaseRunner<PhaseData>()
-  const promise = runner.run(askName, message, () => emitter)
+  const promise = runner.run(askName, message, () => emitter, {})
   // Wait for all pending promise callbacks to be executed for the emitter to set up
   await flushPromises()
-  expect(runner.indexOf(askName)).toEqual(0)
   // Accept the name
-  emitter.emit('accept', createMockMessage(name), {
-    name
-  })
+  emitter.emit('message', createMockMessage(name))
+  // Assert askName ran first
+  expect(runner.indexOf(askName)).toEqual(0)
   // Wait for all pending promise callbacks to be executed for message to be accepted
-  // Accept the age
   await flushPromises()
+  // Accept the age
+  emitter.emit('message', createMockMessage(age))
+  // Assert askAge ran second
   expect(runner.indexOf(askAge)).toEqual(1)
-  emitter.emit('accept', createMockMessage(age), {
-    age
-  })
   await promise
+  // Assert tooOld ran third, and tooYoung never ran
   expect(runner.indexesOf([tooOld, tooYoung]))
     .toEqual([2, -1])
 })
