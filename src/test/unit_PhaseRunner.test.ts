@@ -153,7 +153,7 @@ describe('Unit::PhaseRunner', () => {
         { a: 2, b: 2 }
       ]
       const collectSpies = phases.map((p, index) => {
-        p.children = [new Phase(phaseForm, phaseFunc)]
+        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         jest.spyOn(p, 'collect').mockResolvedValue({
           data: phasesCollectedData[index],
           message: phasesCollectedMessages[index]
@@ -191,7 +191,7 @@ describe('Unit::PhaseRunner', () => {
         .mockResolvedValue(null)
       const phases = [phase1, phase2, phase3]
       const collectSpies = phases.map(p => {
-        p.children = [new Phase(phaseForm, phaseFunc)]
+        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         return jest.spyOn(p, 'collect').mockResolvedValue({
           data: {},
           message: createMockMessage()
@@ -225,7 +225,7 @@ describe('Unit::PhaseRunner', () => {
         .mockResolvedValue(null)
       const phases = [phase1, phase2, phase3]
       phases.forEach(p => {
-        p.children = [new Phase(phaseForm, phaseFunc)]
+        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         return jest.spyOn(p, 'collect').mockResolvedValue({
           data: {},
           message: createMockMessage()

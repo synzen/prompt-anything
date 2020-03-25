@@ -47,6 +47,13 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   }
 
   /**
+   * If this Phase should collect messages
+   */
+  shouldRunCollector (): boolean {
+    return this.children.length > 0
+  }
+
+  /**
    * Send the text and embed for this phase.
    * 
    * @param message - The MessageInterface before this phase
