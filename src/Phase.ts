@@ -60,6 +60,14 @@ export class Phase<T> extends TreeNode<Phase<T>> {
     this.condition = condition
   }
 
+  /**
+   * Handles timeout and messages of a message colllector
+   * 
+   * @param emitter Message collector
+   * @param func Phase function
+   * @param data Phase data
+   * @param duration Duration of collector before it emits inactivity
+   */
   static handleCollector<T> (emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
@@ -77,24 +85,33 @@ export class Phase<T> extends TreeNode<Phase<T>> {
     })
   }
 
-  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, thisMessage: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
-    if (thisMessage.content === 'exit') {
-      emitter.emit('exit', thisMessage)
+  /**
+   * Handle each individual message from a collector to determine
+   * what event it should emit
+   * 
+   * @param emitter Message collector
+   * @param message Collected message
+   * @param func Phase function
+   * @param data Phase data
+   */
+  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, message: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
+    if (message.content === 'exit') {
+      emitter.emit('exit', message)
       return true
     }
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
-      const newData = await func(thisMessage, data)
-      emitter.emit('accept', thisMessage, newData)
+      const newData = await func(message, data)
+      emitter.emit('accept', message, newData)
       return true
     } catch (err) {
       if (err instanceof Rejection) {
         // Don't stop collector since rejects can be tried again
-        emitter.emit('reject', thisMessage, err)
+        emitter.emit('reject', message, err)
         return false
       } else {
-        emitter.emit('error', thisMessage, err)
+        emitter.emit('error', message, err)
         return true
       }
     }
@@ -150,6 +167,11 @@ export class Phase<T> extends TreeNode<Phase<T>> {
     return null
   }
 
+  /**
+   * Store a message into this phase's store
+   * 
+   * @param message 
+   */
   storeMessage (message: MessageInterface): void {
     this.messages.push(message)
   }
