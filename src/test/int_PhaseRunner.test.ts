@@ -1,4 +1,4 @@
-import { Phase, FormatGenerator, PhaseFunction, PhaseCondition, PhaseCollectorInterface } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction, PhaseCondition, PhaseCollectorCreator } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
@@ -10,44 +10,53 @@ async function flushPromises(): Promise<void> {
   });
 }
 
+type MockChannel = {
+  send: jest.Mock;
+}
+
 type MockMessage = {
-  author: {
-    id: string;
-  };
-  channel: {
-    send: jest.Mock;
-  };
   content: string;
 }
 
+const createMockChannel = (): MockChannel => ({
+  send: jest.fn(() => Promise.resolve())
+})
+
 const createMockMessage = (content = ''): MockMessage => ({
-  author: {
-    id: '1'
-  },
-  channel: {
-    send: jest.fn(() => Promise.resolve())
-  },
   content
 })
 
+const phaseForm: FormatGenerator<{}> = () => ({
+  text: '1',
+  embed: {
+    title: '1'
+  }
+})
+const phaseFunc: PhaseFunction<{}> = async () => ({})
+
+class MyPhase<T> extends Phase<T> {
+  createCollector (): EventEmitter {
+    return new EventEmitter()
+  }
+}
+
 describe('Int::PhaseRunner', () => {
-  const phaseForm: FormatGenerator<{}> = () => ({
-    text: '1',
-    embed: {
-      title: '1'
-    }
+  let emitter = new EventEmitter()
+  beforeEach(() => {
+    emitter = new EventEmitter()
+    jest.spyOn(MyPhase.prototype, 'createCollector')
+      .mockReturnValue(emitter)
   })
-  const phaseFunc: PhaseFunction<{}> = async () => ({})
   afterEach(() => {
     jest.restoreAllMocks()
   })
   describe('execute', () => {
     it('runs the right phases (ignoring collect)', async () => {
-      const message = createMockMessage()
-      const phaseR = new Phase(phaseForm, phaseFunc)
-      const phaseRC1 = new Phase(phaseForm, phaseFunc, async () => false)
-      const phaseRC2 = new Phase(phaseForm, phaseFunc, async () => true)
-      const phaseRC11 = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phaseR = new MyPhase(phaseForm, phaseFunc)
+      const phaseRC1 = new MyPhase(phaseForm, phaseFunc, async () => false)
+      const phaseRC2 = new MyPhase(phaseForm, phaseFunc, async () => true)
+      const phaseRC11 = new MyPhase(phaseForm, phaseFunc)
       const phaseRC111 = new EndPhase(phaseForm, phaseFunc, async () => true)
       const phaseRC112 = new EndPhase(phaseForm, phaseFunc, async () => false)
       const phases = [phaseR, phaseRC1, phaseRC2, phaseRC11, phaseRC111, phaseRC112]
@@ -64,7 +73,7 @@ describe('Int::PhaseRunner', () => {
       // Either of these should not collect since they have no children
       phaseRC11.children = [phaseRC111, phaseRC112]
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phaseR, message, () => new EventEmitter())
+      await runner.execute(phaseR, channel, () => new EventEmitter())
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
       expect(spies[2]).toHaveBeenCalledTimes(1)
@@ -76,43 +85,42 @@ describe('Int::PhaseRunner', () => {
       ])
     })
     it('runs collect for regular Phase even if no children', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       const spy = jest.spyOn(phase, 'collect').mockResolvedValue({
         data: {},
         message: createMockMessage()
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, message, () => new EventEmitter())
+      await runner.execute(phase, channel, () => new EventEmitter())
       expect(spy).toHaveBeenCalledTimes(1)
     })
     it('does not run collect for EndPhase', async () => {
-      const message = createMockMessage()
+      const channel = createMockChannel()
       const phase = new EndPhase(phaseForm, phaseFunc)
       const spy = jest.spyOn(phase, 'collect').mockResolvedValue({
         data: {},
         message: createMockMessage()
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, message, () => new EventEmitter())
+      await runner.execute(phase, channel, () => new EventEmitter())
       expect(spy).not.toHaveBeenCalled()
     })
   })
   describe('run', () => {
     it('works with phase collect and getNext', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
-      const phaseC1 = new Phase(phaseForm, phaseFunc, async () => false)
-      const phaseC2 = new Phase(phaseForm, phaseFunc, async () => true)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
+      const phaseC1 = new MyPhase(phaseForm, phaseFunc, async () => false)
+      const phaseC2 = new MyPhase(phaseForm, phaseFunc, async () => true)
       const phaseC21 = new EndPhase(phaseForm, phaseFunc)
 
       phase.children = [phaseC1, phaseC2]
       phaseC2.children = [phaseC21]
       phaseC21.children = []
 
-      const emitter: PhaseCollectorInterface<{}> = new EventEmitter()
       const runner = new PhaseRunner<{}>()
-      const promise = runner.run(phase, message, () => emitter)
+      const promise = runner.run(phase, channel)
       await flushPromises()
       emitter.emit('message', createMockMessage())
       expect(runner.indexOf(phase)).toEqual(0)
@@ -141,7 +149,6 @@ describe('Int::PhaseRunner', () => {
         data.name = m.content
         return data
       }
-      const askName = new Phase<PhaseData>(thisPhaseForm, askNameFn)
       
       // Ask age phase that collects messages
       const askAgeFn: PhaseFunction<PhaseData> = async (m, data) => {
@@ -155,24 +162,26 @@ describe('Int::PhaseRunner', () => {
         data.age = Number(m.content)
         return data
       }
-      const tooOldFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
         return !!(data && data.age && data.age >= 20)
       }
-      const tooYoungFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
         return !!(data && data.age && data.age < 20)
       }
-      const askAge = new Phase<PhaseData>(thisPhaseForm, askAgeFn)
-      const tooOld = new Phase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
-      const tooYoung = new Phase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
+
+      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
+      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
+      const tooOld = new MyPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
+      const tooYoung = new MyPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
       askName.setChildren([askAge])
       askAge.setChildren([tooOld, tooYoung])
       
-      const message = createMockMessage()
-      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
+      const channel = createMockChannel()
       const name = 'George'
       const age = '30'
+      
       const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, message, () => emitter, {})
+      const promise = runner.run(askName, channel, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name
@@ -207,7 +216,7 @@ describe('Int::PhaseRunner', () => {
         data.name = m.content
         return data
       }
-      const askName = new Phase<PhaseData>(thisPhaseForm, askNameFn)
+      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
       
       // Ask age phase that collects messages
       const askAgeFnSpy = jest.fn()
@@ -224,30 +233,26 @@ describe('Int::PhaseRunner', () => {
         return data
       }
       const tooOldFnSpy = jest.fn()
-      const tooOldFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
         tooOldFnSpy()
         return !!(data && data.age && data.age >= 20)
       }
       const tooYoungFnSpy = jest.fn()
-      const tooYoungFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
         tooYoungFnSpy()
         return !!(data && data.age && data.age < 20)
       }
-      const askAge = new Phase<PhaseData>(thisPhaseForm, askAgeFn)
+      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
       const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
       const tooYoung = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
       askName.setChildren([askAge])
       askAge.setChildren([tooOld, tooYoung])
       
-      const message = createMockMessage()
-      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
+      const channel = createMockChannel()
       const name = 'George'
       const age = '30'
       const runner = new PhaseRunner<PhaseData>()
-      const collectorCreator = function (): PhaseCollectorInterface<PhaseData> {
-        return emitter
-      }
-      const promise = runner.run(askName, message, collectorCreator, {})
+      const promise = runner.run(askName, channel, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name
@@ -273,10 +278,10 @@ describe('Int::PhaseRunner', () => {
           title: '1'
         }
       })
-      const tooOldFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
         return !!(data && data.age && data.age >= 20)
       }
-      const tooYoungFn: PhaseCondition<PhaseData> = async (m, data) => {
+      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
         return !!(data && data.age && data.age < 20)
       }
       const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
@@ -294,7 +299,7 @@ describe('Int::PhaseRunner', () => {
         this.setChildren([tooYoung, tooOld])
         return data
       }
-      const askAge = new Phase<PhaseData>(thisPhaseForm, askAgeFn)
+      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
       
       const askNameFn: PhaseFunction<PhaseData> = async function (m, data) {
         if (!data) {
@@ -304,17 +309,13 @@ describe('Int::PhaseRunner', () => {
         this.setChildren([askAge])
         return data
       }
-      const askName = new Phase<PhaseData>(thisPhaseForm, askNameFn)
+      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
 
-      const message = createMockMessage()
-      const emitter: PhaseCollectorInterface<PhaseData> = new EventEmitter()
-      const collectorCreator = function (): PhaseCollectorInterface<PhaseData> {
-        return emitter
-      }
+      const channel = createMockChannel()
       const name = 'George'
       const age = '30'
       const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, message, collectorCreator, {})
+      const promise = runner.run(askName, channel, {})
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name

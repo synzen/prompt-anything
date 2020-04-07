@@ -4,6 +4,13 @@ import { EventEmitter } from "events"
 
 jest.mock('../Phase')
 
+class MyPhase extends Phase<{}> {
+  createCollector: PhaseCollectorCreator<{}> = () => {
+    return new EventEmitter()
+  }
+
+}
+
 type MockMessage = {
   author: {
     id: string;
@@ -26,6 +33,14 @@ const createMockMessage = (content = ''): MockMessage => ({
   content: content
 })
 
+type MockChannel = {
+  send: jest.Mock;
+}
+
+const createMockChannel = (): MockChannel => ({
+  send: jest.fn(() => Promise.resolve())
+})
+
 describe('Unit::PhaseRunner', () => {
   const phaseForm: FormatGenerator<{}> = () => ({
     text: '1',
@@ -41,10 +56,10 @@ describe('Unit::PhaseRunner', () => {
     it('throws error if invalid phase', async () => {
       jest.spyOn(PhaseRunner, 'valid')
         .mockReturnValue(false)
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
-      await expect(runner.run(phase, message, () => new EventEmitter()))
+      await expect(runner.run(phase, channel))
         .rejects
         .toThrow('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     })
@@ -53,33 +68,33 @@ describe('Unit::PhaseRunner', () => {
         .mockReturnValue(true)
       
       const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
       const spy = jest.spyOn(runner, 'execute')
         .mockResolvedValue()
-      const emitterCreator: PhaseCollectorCreator<{}> = () => new EventEmitter()
       const data = {
         foo: 1
       }
-      await runner.run(phase, message, emitterCreator, data)
-      expect(spy).toHaveBeenCalledWith(phase, message, emitterCreator, data)
+      await runner.run(phase, channel, data, message)
+      expect(spy).toHaveBeenCalledWith(phase, channel, data, message)
     })
   })
   describe('validate', () => {
     it('throws returns true for <= 1 children with no conditions', () => {
-      const phaseR = new Phase(phaseForm, phaseFunc)
-      const phaseR1 = new Phase(phaseForm, phaseFunc)
-      const phaseR11 = new Phase(phaseForm, phaseFunc)
+      const phaseR = new MyPhase(phaseForm, phaseFunc)
+      const phaseR1 = new MyPhase(phaseForm, phaseFunc)
+      const phaseR11 = new MyPhase(phaseForm, phaseFunc)
       phaseR.children = [phaseR1]
       phaseR1.children = [phaseR11]
       phaseR11.children = []
       expect(PhaseRunner.valid(phaseR)).toEqual(true)
     })
     it('returns false for > 1 children with some having no conditions', () => {
-      const phaseR = new Phase(phaseForm, phaseFunc)
-      const phaseR1 = new Phase(phaseForm, phaseFunc)
-      const phaseR11 = new Phase(phaseForm, phaseFunc)
-      const phaseR12 = new Phase(phaseForm, phaseFunc)
+      const phaseR = new MyPhase(phaseForm, phaseFunc)
+      const phaseR1 = new MyPhase(phaseForm, phaseFunc)
+      const phaseR11 = new MyPhase(phaseForm, phaseFunc)
+      const phaseR12 = new MyPhase(phaseForm, phaseFunc)
       phaseR.children = [phaseR1]
       phaseR1.children = [phaseR11, phaseR12]
       phaseR11.children = []
@@ -87,21 +102,21 @@ describe('Unit::PhaseRunner', () => {
       expect(PhaseRunner.valid(phaseR)).toEqual(false)
     })
     it('returns true for > 1 children all having conditions', () => {
-      const phaseR = new Phase(phaseForm, phaseFunc)
-      const phaseR1 = new Phase(phaseForm, phaseFunc)
-      const phaseR11 = new Phase(phaseForm, phaseFunc)
+      const phaseR = new MyPhase(phaseForm, phaseFunc)
+      const phaseR1 = new MyPhase(phaseForm, phaseFunc)
+      const phaseR11 = new MyPhase(phaseForm, phaseFunc)
       Object.defineProperty(phaseR11, 'condition', {
         value: () => false
       })
-      const phaseR12 = new Phase(phaseForm, phaseFunc)
+      const phaseR12 = new MyPhase(phaseForm, phaseFunc)
       Object.defineProperty(phaseR12, 'condition', {
         value: () => true
       })
-      const phaseR121 = new Phase(phaseForm, phaseFunc)
+      const phaseR121 = new MyPhase(phaseForm, phaseFunc)
       Object.defineProperty(phaseR121, 'condition', {
         value: () => true
       })
-      const phaseR122 = new Phase(phaseForm, phaseFunc)
+      const phaseR122 = new MyPhase(phaseForm, phaseFunc)
       Object.defineProperty(phaseR122, 'condition', {
         value: () => true
       })
@@ -116,8 +131,8 @@ describe('Unit::PhaseRunner', () => {
   })
   describe('execute', () => {
     it('sends the message', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
       jest.spyOn(phase, 'collect')
         .mockResolvedValue({
@@ -129,14 +144,15 @@ describe('Unit::PhaseRunner', () => {
         foo: 1
       }
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, message, () => new EventEmitter(), data)
-      expect(phaseSend).toHaveBeenCalledWith(message, data)
+      await runner.execute(phase, channel, data)
+      expect(phaseSend).toHaveBeenCalledWith(channel, data)
     })
     it('sends all phase messages', async () => {
       const message = createMockMessage('initial message')
-      const phase1 = new Phase(phaseForm, phaseFunc)
-      const phase2 = new Phase(phaseForm, phaseFunc)
-      const phase3 = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase1 = new MyPhase(phaseForm, phaseFunc)
+      const phase2 = new MyPhase(phaseForm, phaseFunc)
+      const phase3 = new MyPhase(phaseForm, phaseFunc)
       jest.spyOn(phase1, 'getNext')
         .mockResolvedValue(phase2)
       jest.spyOn(phase2, 'getNext')
@@ -152,7 +168,7 @@ describe('Unit::PhaseRunner', () => {
         { a: 1 },
         { a: 2, b: 2 }
       ]
-      const collectSpies = phases.map((p, index) => {
+      const sendMessageSpies = phases.map((p, index) => {
         jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         jest.spyOn(p, 'collect').mockResolvedValue({
           data: phasesCollectedData[index],
@@ -164,25 +180,25 @@ describe('Unit::PhaseRunner', () => {
       const initialData = {
         a: 0
       }
-      await runner.execute(phase1, message, () => new EventEmitter(), initialData)
-      expect(collectSpies[0]).toHaveBeenCalledWith(
-        message,
+      await runner.execute(phase1, channel, initialData)
+      expect(sendMessageSpies[0]).toHaveBeenCalledWith(
+        channel,
         initialData
       )
-      expect(collectSpies[1]).toHaveBeenCalledWith(
-        phasesCollectedMessages[0],
+      expect(sendMessageSpies[1]).toHaveBeenCalledWith(
+        channel,
         phasesCollectedData[0]
       )
-      expect(collectSpies[2]).toHaveBeenCalledWith(
-        phasesCollectedMessages[1],
+      expect(sendMessageSpies[2]).toHaveBeenCalledWith(
+        channel,
         phasesCollectedData[1]
       )
     })
     it('runs all phases', async () => {
-      const message = createMockMessage()
-      const phase1 = new Phase(phaseForm, phaseFunc)
-      const phase2 = new Phase(phaseForm, phaseFunc)
-      const phase3 = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase1 = new MyPhase(phaseForm, phaseFunc)
+      const phase2 = new MyPhase(phaseForm, phaseFunc)
+      const phase3 = new MyPhase(phaseForm, phaseFunc)
       jest.spyOn(phase1, 'getNext')
         .mockResolvedValue(phase2)
       jest.spyOn(phase2, 'getNext')
@@ -198,25 +214,25 @@ describe('Unit::PhaseRunner', () => {
         })
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase1, message, () => new EventEmitter())
+      await runner.execute(phase1, channel)
       for (const spy of collectSpies) {
         expect(spy).toHaveBeenCalledTimes(1)
       }
     })
     it('does not call phase collect for phase with no children', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
       const spy = jest.spyOn(phase, 'collect')
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, message, () => new EventEmitter())
+      await runner.execute(phase, channel)
       expect(spy).not.toHaveBeenCalled()
     })
     it('adds each ran phase into this.ran', async () => {
-      const message = createMockMessage()
-      const phase1 = new Phase(phaseForm, phaseFunc)
-      const phase2 = new Phase(phaseForm, phaseFunc)
-      const phase3 = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase1 = new MyPhase(phaseForm, phaseFunc)
+      const phase2 = new MyPhase(phaseForm, phaseFunc)
+      const phase3 = new MyPhase(phaseForm, phaseFunc)
       jest.spyOn(phase1, 'getNext')
         .mockResolvedValue(phase2)
       jest.spyOn(phase2, 'getNext')
@@ -232,32 +248,32 @@ describe('Unit::PhaseRunner', () => {
         })
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase1, message, () => new EventEmitter())
+      await runner.execute(phase1, channel)
       expect(runner.ran).toEqual([phase1, phase2, phase3])
     })
   })
   describe('static run', () => {
     it('runs the created phase runner', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
       const spy = jest.spyOn(PhaseRunner.prototype, 'run')
-      await PhaseRunner.run(phase, message, () => new EventEmitter())
+      await PhaseRunner.run(phase, channel)
       expect(spy).toHaveBeenCalledTimes(1)
     })
     it('returns the PhaseRunner', async () => {
-      const message = createMockMessage()
-      const phase = new Phase(phaseForm, phaseFunc)
+      const channel = createMockChannel()
+      const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
-      const returned = await PhaseRunner.run(phase, message, () => new EventEmitter())
+      const returned = await PhaseRunner.run(phase, channel)
       expect(returned).toBeInstanceOf(PhaseRunner)
     })
   })
   describe('indexesOf', () => {
     it('calls indexOf', () => {
-      const phase1 = new Phase(phaseForm, phaseFunc)
-      const phase2 = new Phase(phaseForm, phaseFunc)
-      const phase3 = new Phase(phaseForm, phaseFunc)
+      const phase1 = new MyPhase(phaseForm, phaseFunc)
+      const phase2 = new MyPhase(phaseForm, phaseFunc)
+      const phase3 = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
       Object.defineProperty(runner, 'ran', {
         value: [phase2, phase3, phase1]
@@ -273,9 +289,9 @@ describe('Unit::PhaseRunner', () => {
   })
   describe('indexOf', () => {
     it('returns the index of the phase', () => {
-      const phase1 = new Phase(phaseForm, phaseFunc)
-      const phase2 = new Phase(phaseForm, phaseFunc)
-      const phase3 = new Phase(phaseForm, phaseFunc)
+      const phase1 = new MyPhase(phaseForm, phaseFunc)
+      const phase2 = new MyPhase(phaseForm, phaseFunc)
+      const phase3 = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
       Object.defineProperty(runner, 'ran', {
         value: [phase2, phase3, phase1]

@@ -1,6 +1,12 @@
-import { Phase, Format, PhaseCollectorCreator, PhaseCollectorInterface } from "../Phase"
+import { Phase, PhaseCollectorCreator, FormatGenerator } from "../Phase"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
+
+class MyPhase extends Phase<{}> {
+  createCollector (): EventEmitter {
+    return new EventEmitter()
+  }
+}
 
 async function flushPromises(): Promise<void> {
   return new Promise(resolve => {
@@ -39,14 +45,14 @@ describe('Unit::Phase', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
-  const phaseVis = (): Format => ({
+  const phaseVis = (): { text: string } => ({
     text: 'foobar'
   })
   const phaseFunc = async (): Promise<{}> => ({})
   const phaseCond = async (): Promise<boolean> => false
   it('initializes correctly', () => {
     const duration = 234
-    const phase = new Phase(phaseVis, phaseFunc, phaseCond, duration)
+    const phase = new MyPhase(phaseVis, phaseFunc, phaseCond, duration)
     expect(phase.formatGenerator).toEqual(phaseVis)
     expect(phase.function).toEqual(phaseFunc)
     expect(phase.condition).toEqual(phaseCond)
@@ -54,32 +60,21 @@ describe('Unit::Phase', () => {
   })
   describe('shouldRunCollector', () => {
     it('returns true', () => {
-      const phase = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
       expect(phase.shouldRunCollector()).toEqual(true)  
     })
   })
   describe('static handleMessage', () => {
     const authorID = '3w4ey5ru7t'
-    it('emits nothing if author does not match original', async () => {
-      const originalMessage = createMockMessage('', authorID + 'abc')
-      const message = createMockMessage('exit', authorID)
-      const emitter = new EventEmitter()
-      const emit = jest.spyOn(emitter, 'emit')
-      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, phaseFunc)
-      expect(emit).not.toHaveBeenCalled()
-      expect(stopCollecting).toEqual(false)
-    })
     it('emits exit if message is exit', async () => {
-      const originalMessage = createMockMessage('', authorID)
       const message = createMockMessage('exit', authorID)
       const emitter = new EventEmitter()
       const emit = jest.spyOn(emitter, 'emit')
-      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, phaseFunc)
+      const stopCollecting = await Phase.handleMessage(emitter, message, phaseFunc)
       expect(emit).toHaveBeenCalledWith('exit', message)
       expect(stopCollecting).toEqual(true)
     })
     it('emits accept if no error is thrown in func', async () => {
-      const originalMessage = createMockMessage('', authorID)
       const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
       const emit = jest.spyOn(emitter, 'emit')
@@ -87,12 +82,11 @@ describe('Unit::Phase', () => {
         fo: 'bar'
       }
       const thisPhaseFunc = async (): Promise<{}> => funcData
-      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
       expect(emit).toHaveBeenCalledWith('accept', message, funcData)
       expect(stopCollecting).toEqual(true)
     })
     it('emits reject if func error is a Rejection', async () => {
-      const originalMessage = createMockMessage('', authorID)
       const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
       const emit = jest.spyOn(emitter, 'emit')
@@ -100,12 +94,11 @@ describe('Unit::Phase', () => {
       const thisPhaseFunc = async (): Promise<{}> => {
         throw rejectError
       }
-      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
       expect(emit).toHaveBeenCalledWith('reject', message, rejectError)
       expect(stopCollecting).toEqual(false)
     })
     it('emits error if func error is not Rejection', async () => {
-      const originalMessage = createMockMessage('', authorID)
       const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
       // Node always requires an error listener if it emits error
@@ -117,7 +110,7 @@ describe('Unit::Phase', () => {
       const thisPhaseFunc = async (): Promise<{}> => {
         throw error
       }
-      const stopCollecting = await Phase.handleMessage(emitter, originalMessage, message, thisPhaseFunc)
+      const stopCollecting = await Phase.handleMessage(emitter, message, thisPhaseFunc)
       expect(emit).toHaveBeenCalledWith('error', message, error)
       expect(stopCollecting).toEqual(true)
     })
@@ -136,19 +129,19 @@ describe('Unit::Phase', () => {
         foo: 'bar'
       }
       const handleMessage = jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(originalMessage, emitter, phaseFunc, data)
+      Phase.handleCollector(emitter, phaseFunc, data)
       emitter.emit('message', message)
       emitter.emit('message', message2)
       await flushPromises()
-      expect(handleMessage).toHaveBeenCalledWith(emitter, originalMessage, message, phaseFunc, data)
-      expect(handleMessage).toHaveBeenCalledWith(emitter, originalMessage, message2, phaseFunc, data)
+      expect(handleMessage).toHaveBeenCalledWith(emitter, message, phaseFunc, data)
+      expect(handleMessage).toHaveBeenCalledWith(emitter, message2, phaseFunc, data)
     })
     it('emits stop if handleMessage returns true to stop collection', async () => {
       const emitter = new EventEmitter()
       const message = createMockMessage()
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(true)
       const emit = jest.spyOn(emitter, 'emit')
-      Phase.handleCollector(createMockMessage(), emitter, phaseFunc)
+      Phase.handleCollector(emitter, phaseFunc)
       emitter.emit('message', message)
       await flushPromises()
       expect(emit).toHaveBeenCalledWith('stop')
@@ -161,7 +154,7 @@ describe('Unit::Phase', () => {
       }
       const duration = 9423
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
+      Phase.handleCollector(emitter, phaseFunc, data, duration)
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), duration)
     })
     it('does not call settimeout if no duration', () => {
@@ -171,7 +164,7 @@ describe('Unit::Phase', () => {
       }
       const duration = undefined
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
+      Phase.handleCollector(emitter, phaseFunc, data, duration)
       expect(setTimeout).not.toHaveBeenCalled()
     })
     it('emits stop and inactivity if timeout runs', () => {
@@ -182,7 +175,7 @@ describe('Unit::Phase', () => {
       const duration = 9423
       const emit = jest.spyOn(emitter, 'emit')
       jest.spyOn(Phase, 'handleMessage').mockResolvedValue(false)
-      Phase.handleCollector(createMockMessage(), emitter, phaseFunc, data, duration)
+      Phase.handleCollector(emitter, phaseFunc, data, duration)
       jest.runOnlyPendingTimers()
       expect(emit).toHaveBeenCalledWith('stop')
       expect(emit).toHaveBeenCalledWith('inactivity')
@@ -190,54 +183,32 @@ describe('Unit::Phase', () => {
   })
   describe('sendMessage', () => {
     const format = {
-      text: 'hwat',
-      embed: {
-        title: 'foobar'
-      }
+      text: 'hwat'
     }
-    it('sends the text and embed', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      phase.formatGenerator = (): Format => format
-      const message = createMockMessage()
-      await phase.sendMessage(message, {})
-      expect(message.channel.send)
-        .toHaveBeenCalledWith(format.text, format.embed)
+    it('sends the text', async () => {
+      const phase = new MyPhase(phaseVis, phaseFunc)
+      phase.formatGenerator = (): { text: string } => format
+      const channel = createMockChannel()
+      await phase.sendMessage(channel)
+      expect(channel.send)
+        .toHaveBeenCalledWith(format)
     })
     it('returns the message if it exists', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      phase.formatGenerator = (): Format => format
+      const phase = new MyPhase(phaseVis, phaseFunc)
+      phase.formatGenerator = (): { text: string } => format
       const returnedMessage = createMockMessage()
-      const message = createMockMessage()
-      message.channel.send.mockResolvedValue(returnedMessage)
-      const returned = await phase.sendMessage(message, {})
+      const channel = createMockChannel()
+      channel.send.mockResolvedValue(returnedMessage)
+      const returned = await phase.sendMessage(channel, {})
       expect(returned).toEqual(returnedMessage)
-    })
-    it('only sends embed if no text', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      phase.formatGenerator = (): Format => ({
-        embed: format.embed
-      })
-      const message = createMockMessage()
-      await phase.sendMessage(message, {})
-      expect(message.channel.send)
-        .toHaveBeenCalledWith('', format.embed)
-    })
-    it('does not send and returns null if nothing to send', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      phase.formatGenerator = (): Format => ({})
-      const message = createMockMessage()
-      const returned = await phase.sendMessage(message, {})
-      expect(message.channel.send)
-        .not.toHaveBeenCalled()
-      expect(returned).toBeNull()
     })
   })
   describe('getNext', () => {
     it('returns the right child', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      const phaseC1 = new Phase(phaseVis, phaseFunc)
-      const phaseC2 = new Phase(phaseVis, phaseFunc)
-      const phaseC3 = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
+      const phaseC1 = new MyPhase(phaseVis, phaseFunc)
+      const phaseC2 = new MyPhase(phaseVis, phaseFunc)
+      const phaseC3 = new MyPhase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2, phaseC3]
       Object.defineProperty(phaseC1, 'condition', {
         value: async () => false
@@ -253,9 +224,9 @@ describe('Unit::Phase', () => {
         .resolves.toEqual(phaseC2)
     })
     it('returns null for no elgiible children', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      const phaseC1 = new Phase(phaseVis, phaseFunc)
-      const phaseC2 = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
+      const phaseC1 = new MyPhase(phaseVis, phaseFunc)
+      const phaseC2 = new MyPhase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2]
       Object.defineProperty(phaseC1, 'condition', {
         value: async () => false
@@ -268,9 +239,9 @@ describe('Unit::Phase', () => {
         .resolves.toEqual(null)
     })
     it('returns one with no condition if it exists', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
-      const phaseC1 = new Phase(phaseVis, phaseFunc)
-      const phaseC2 = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
+      const phaseC1 = new MyPhase(phaseVis, phaseFunc)
+      const phaseC2 = new MyPhase(phaseVis, phaseFunc)
       phase.children = [phaseC1, phaseC2]
       Object.defineProperty(phaseC1, 'condition', {
         value: async () => false
@@ -282,25 +253,27 @@ describe('Unit::Phase', () => {
   })
   describe('terminateHere', () => {
     it('clears the children', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
       const message = createMockMessage()
       phase.children = [
-        new Phase(phaseVis, phaseFunc)
+        new MyPhase(phaseVis, phaseFunc)
       ]
       await phase.terminateHere(message.channel, 'abc')
       expect(phase.children).toEqual([])
     })
     it('sends the message', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
       const message = createMockMessage()
       phase.children = []
       const messageString = 'q3et4wr'
       await phase.terminateHere(message.channel, messageString)
       expect(message.channel.send)
-        .toHaveBeenCalledWith(messageString)
+        .toHaveBeenCalledWith({
+          text: messageString
+        })
     })
     it('returns the message sent', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
       const message = createMockMessage()
       phase.children = []
       const resolvedMessage = {
@@ -312,7 +285,7 @@ describe('Unit::Phase', () => {
       expect(returned).toEqual(resolvedMessage)
     })
     it('stores the message', async () => {
-      const phase = new Phase(phaseVis, phaseFunc)
+      const phase = new MyPhase(phaseVis, phaseFunc)
       const message = createMockMessage()
       phase.children = []
       const spy = jest.spyOn(phase, 'storeMessage')
@@ -328,50 +301,50 @@ describe('Unit::Phase', () => {
     let emitter: EventEmitter
     let phase: Phase<object>
     let terminateSpy: jest.SpyInstance
-    let message: MockMessage
-    let emitterCreator: PhaseCollectorCreator<{}>
+    let channel: MockChannel
     beforeEach(() => {
       emitter = new EventEmitter()
-      phase = new Phase(phaseVis, phaseFunc)
-      message = createMockMessage()
+      phase = new MyPhase(phaseVis, phaseFunc)
+      channel = createMockChannel()
       terminateSpy = jest.spyOn(phase, 'terminateHere')
         .mockResolvedValue(createMockMessage())
-      emitterCreator = (): PhaseCollectorInterface<{}> => emitter
-      jest.spyOn(Phase, 'handleCollector').mockReturnValue()
+      jest.spyOn(MyPhase.prototype, 'createCollector')
+        .mockReturnValue(emitter)
+      jest.spyOn(MyPhase, 'handleCollector')
+        .mockReturnValue()
     })
-    it('resolves with original message and data if no phase function', async () => {
-      const phaseNoFunc = new Phase<{}>(phaseVis)
+    it('resolves with data if no phase function', async () => {
+      const phaseNoFunc = new MyPhase(phaseVis)
       const data = {
         foo: 'bar'
       }
-      const result = await phaseNoFunc.collect(message, emitterCreator, data)
+      const result = await phaseNoFunc.collect(channel, data)
       expect(result).toEqual({
-        message,
         data
       })
     })
     describe('collector exit', () => {
       it('terminates on collector exit', async () => {
-        const phaseRun = phase.collect(message, emitterCreator, {})
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('exit')
         await phaseRun
         expect(terminateSpy)
-          .toHaveBeenCalledWith(message.channel, Phase.STRINGS.exit)
+          .toHaveBeenCalledWith(channel, Phase.STRINGS.exit)
       })
     })
     describe('collector inactivity', () => {
       it('terminates on collector inactivity', async () => {
-        const phaseRun = phase.collect(message, emitterCreator)
+        const phaseRun = phase.collect(channel)
         emitter.emit('inactivity')
         await phaseRun
         expect(terminateSpy)
-          .toHaveBeenCalledWith(message.channel, Phase.STRINGS.inactivity)
+          .toHaveBeenCalledWith(channel, Phase.STRINGS.inactivity)
       })
     })
     describe('collector error', () => {
       it('rejects phase run', async () => {
         const error = new Error('qateswgry')
-        const phaseRun = phase.collect(message, emitterCreator)
+        const phaseRun = phase.collect(channel)
         const lastUserInput = createMockMessage()
         emitter.emit('error', lastUserInput, error)
         await expect(phaseRun).rejects.toThrow(error)
@@ -380,20 +353,24 @@ describe('Unit::Phase', () => {
     describe('collector reject', () => {
       it('sends the custom error message', async () => {
         const error = new Rejection('qateswgry')
-        const phaseRun = phase.collect(message, emitterCreator)
+        const phaseRun = phase.collect(channel)
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await phaseRun
-        expect(message.channel.send).toHaveBeenCalledWith(error.message)
+        expect(channel.send).toHaveBeenCalledWith({
+          text: error.message
+        })
       })
       it('sends a fallback error message if no error message', async () => {
         const error = new Rejection()
-        const phaseRun = phase.collect(message, emitterCreator)
-        message.channel.send.mockResolvedValue(1)
+        const phaseRun = phase.collect(channel)
+        channel.send.mockResolvedValue(1)
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await phaseRun
-        expect(message.channel.send).toHaveBeenCalledWith(Phase.STRINGS.rejected)
+        expect(channel.send).toHaveBeenCalledWith({
+          text: Phase.STRINGS.rejected
+        })
       })
     })
     describe('collector accept', () => {
@@ -402,7 +379,7 @@ describe('Unit::Phase', () => {
         const acceptData = {
           foo: 1
         }
-        const phaseRun = phase.collect(message, emitterCreator)
+        const phaseRun = phase.collect(channel)
         emitter.emit('accept', acceptMessage, acceptData)
         await expect(phaseRun).resolves.toEqual({
           message: acceptMessage,
@@ -414,7 +391,7 @@ describe('Unit::Phase', () => {
         const acceptData = {
           foo: 1
         }
-        const phaseRun = phase.collect(message, emitterCreator)
+        const phaseRun = phase.collect(channel)
         emitter.emit('accept', acceptMessage, acceptData)
         await phaseRun
         await expect(phase.messages).toEqual([acceptMessage])

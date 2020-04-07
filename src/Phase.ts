@@ -1,11 +1,11 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { MessageInterface, Embed, ChannelInterface } from './types/discord';
+import { MessageInterface, ChannelInterface, Format } from './types/discord';
 import { EventEmitter } from 'events';
 
 export type PhaseReturnData<T> = {
+  message?: MessageInterface;
   data?: T;
-  message: MessageInterface;
 }
 
 export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data?: T) => Promise<T>
@@ -28,19 +28,16 @@ export interface PhaseCollectorInterface<T> extends EventEmitter {
 }
 
 export type PhaseCollectorCreator<T> = (
-  message: MessageInterface
+  channel: ChannelInterface,
+  initialMessage?: MessageInterface
 ) => PhaseCollectorInterface<T>
 
-export type Format = {
-  text?: string;
-  embed?: Embed;
-}
+export type FormatGenerator<T> = (data?: T) => Format
 
-export type FormatGenerator<T> = (m: MessageInterface, data?: T) => Format
+export type PhaseCondition<T> = (data?: T) => Promise<boolean>;
 
-export type PhaseCondition<T> = (m: MessageInterface, data?: T) => Promise<boolean>;
-
-export class Phase<T> extends TreeNode<Phase<T>> {
+export abstract class Phase<T> extends TreeNode<Phase<T>> {
+  abstract createCollector(channel: ChannelInterface, initialMessage?: MessageInterface): PhaseCollectorInterface<T>;
   formatGenerator: FormatGenerator<T>
   readonly duration: number
   readonly messages: Array<MessageInterface> = []
@@ -63,13 +60,12 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   /**
    * Handles timeout and messages of a message colllector
    * 
-   * @param originalMessage The original message
    * @param emitter Message collector
    * @param func Phase function
    * @param data Phase data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<T> (originalMessage: MessageInterface, emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
+  static handleCollector<T> (emitter: PhaseCollectorInterface<T>, func: PhaseFunction<T>, data?: T, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -78,7 +74,7 @@ export class Phase<T> extends TreeNode<Phase<T>> {
       }, duration)
     }
     emitter.on('message', async thisMessage => {
-      const stopCollecting = await this.handleMessage(emitter, originalMessage, thisMessage, func, data)
+      const stopCollecting = await this.handleMessage(emitter, thisMessage, func, data)
       if (stopCollecting) {
         emitter.emit('stop')
         clearTimeout(timer)
@@ -92,15 +88,11 @@ export class Phase<T> extends TreeNode<Phase<T>> {
    * ID does not match the original message.
    * 
    * @param emitter Message collector
-   * @param originalMessage Original message
    * @param message Collected message
    * @param func Phase function
    * @param data Phase data
    */
-  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, originalMessage: MessageInterface, message: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
-    if (originalMessage.author.id !== message.author.id) {
-      return false
-    }
+  static async handleMessage<T> (emitter: PhaseCollectorInterface<T>, message: MessageInterface, func: PhaseFunction<T>, data?: T): Promise<boolean> {
     if (message.content === 'exit') {
       emitter.emit('exit', message)
       return true
@@ -133,25 +125,26 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   /**
    * Send the text and embed for this phase.
    * 
-   * @param message - The MessageInterface before this phase
+   * @param message The MessageInterface before this phase
    */
-  async sendMessage (message: MessageInterface, data?: T): Promise<MessageInterface|null> {
-    const { channel } = message
-    const { text, embed } = this.formatGenerator(message, data)
-    if (text) {
-      return channel.send(text, embed)
-    } else if (embed) {
-      return channel.send('', embed)
-    }
-    return null
+  async sendMessage (channel: ChannelInterface, data?: T): Promise<MessageInterface> {
+    const format = this.formatGenerator(data)
+    const sent = await channel.send(format)
+    this.storeMessage(sent)
+    return sent
   }
 
   /**
    * Set all children to empty so there is no next phase.
+   * 
+   * @param channel The channel to send the terminate message to
+   * @param terminateString String to send as a message saying the termination
    */
   async terminateHere (channel: ChannelInterface, terminateString: string): Promise<MessageInterface> {
     this.setChildren([])
-    const sent = await channel.send(terminateString)
+    const sent = await channel.send({
+      text: terminateString
+    })
     this.storeMessage(sent)
     return sent
   }
@@ -159,14 +152,14 @@ export class Phase<T> extends TreeNode<Phase<T>> {
   /**
    * Determine what the next phase is given a message and data.
    * 
-   * @param message - The MessageInterface before this phase
-   * @param data - The data before this phase
+   * @param message The author's message that prompted this phase
+   * @param data The data before this phase
    */
-  async getNext (message: MessageInterface, data?: T): Promise<Phase<T>|null> {
+  async getNext (data?: T): Promise<Phase<T>|null> {
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
-      if (!child.condition || await child.condition(message, data)) {
+      if (!child.condition || await child.condition(data)) {
         return child
       }
     }
@@ -186,21 +179,20 @@ export class Phase<T> extends TreeNode<Phase<T>> {
    * Runs the Phase function for every message collected.
    * Reject when channel send promise rejects.
    * 
-   * @param message - The MessageInterface before this phase
-   * @param data - The data before this phase
+   * @param channel The channel to collect from
+   * @param data The data before this phase
+   * @param triggerMessage The message that triggered this collection
    */
-  collect (message: MessageInterface, createCollector: PhaseCollectorCreator<T>, data?: T): Promise<PhaseReturnData<T>> {
-    const channel = message.channel
+  collect (channel: ChannelInterface, data?: T, triggerMessage?: MessageInterface): Promise<PhaseReturnData<T>> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
         resolve({
-          message,
           data
         })
         return
       }
-      const collector: PhaseCollectorInterface<T> =  createCollector(message)
-      Phase.handleCollector(message, collector, this.function.bind(this), data, this.duration)
+      const collector: PhaseCollectorInterface<T> = this.createCollector(channel, triggerMessage)
+      Phase.handleCollector(collector, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
         const sent = await this.terminateHere(channel, terminateString)
@@ -233,8 +225,8 @@ export class Phase<T> extends TreeNode<Phase<T>> {
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         this.storeMessage(userInput)
         const invalidFeedback = err.message || Phase.STRINGS.rejected
-        channel.send(invalidFeedback)
-          .then(m => this.storeMessage(m))
+        channel.send({ text: invalidFeedback })
+          .then((m) => this.storeMessage(m))
           .catch(reject)
       })
     })

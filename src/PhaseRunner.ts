@@ -1,5 +1,5 @@
-import { Phase, PhaseCollectorCreator } from './Phase'
-import { MessageInterface } from './types/discord'
+import { Phase } from './Phase'
+import { ChannelInterface, MessageInterface } from './types/discord'
 
 export class PhaseRunner<T> {
   readonly ran: Array<Phase<T>> = []
@@ -50,48 +50,48 @@ export class PhaseRunner<T> {
    * Validate the phase and all its children before executing
    * 
    * @param phase - Root phase
-   * @param message - The author's message
-   * @param collectorCreator - Function to create a message collector
+   * @param channel - Channel
    * @param initialData - Data for the root phase
    */
-  async run (phase: Phase<T>, message: MessageInterface, collectorCreator: PhaseCollectorCreator<T>, initialData?: T): Promise<void> {
+  async run (phase: Phase<T>, channel: ChannelInterface, initialData?: T, initialMessage?: MessageInterface): Promise<void> {
     if (!PhaseRunner.valid(phase)) {
       throw new Error('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     }
-    return this.execute(phase, message, collectorCreator, initialData)
+    return this.execute(phase, channel, initialData, initialMessage)
   }
 
   /**
    * Execute the phase without validating
    * 
    * @param phase - Root phase
-   * @param message - The author's message
-   * @param collectorCreator - Function to create a message collector
+   * @param channel - Channel
    * @param initialData - Data for the root phase
    */
-  async execute (initialPhase: Phase<T>, message: MessageInterface, collectorCreator: PhaseCollectorCreator<T>, initialData?: T): Promise<void> {
+  async execute (initialPhase: Phase<T>, channel: ChannelInterface, initialData?: T, initialMessage?: MessageInterface): Promise<void> {
     this.ran.push(initialPhase)
     let thisPhase: Phase<T>|null = initialPhase
-    await thisPhase.sendMessage(message, initialData)
+    let thisMessage = initialMessage
+    await thisPhase.sendMessage(channel, initialData)
     while (thisPhase && thisPhase.shouldRunCollector()) {
       const {
         data: phaseData,
         message: phaseMessage
       }: {
         data?: T;
-        message: MessageInterface;
-      } = await thisPhase.collect(message, collectorCreator, initialData)
-      thisPhase = await thisPhase.getNext(phaseMessage, phaseData)
+        message?: MessageInterface;
+      } = await thisPhase.collect(channel, initialData, thisMessage)
+      thisPhase = await thisPhase.getNext(phaseData)
+      thisMessage = phaseMessage
       if (thisPhase) {
-        await thisPhase.sendMessage(phaseMessage, phaseData)
+        await thisPhase.sendMessage(channel, phaseData)
         this.ran.push(thisPhase)
       }
     }
   }
 
-  static async run<T> (initialPhase: Phase<T>, message: MessageInterface, collectorCreator: PhaseCollectorCreator<T>, initialData?: T): Promise<PhaseRunner<T>> {
+  static async run<T> (initialPhase: Phase<T>, channel: ChannelInterface, initialData?: T, initialMessage?: MessageInterface): Promise<PhaseRunner<T>> {
     const runner = new PhaseRunner<T>()
-    await runner.run(initialPhase, message, collectorCreator, initialData)
+    await runner.run(initialPhase, channel, initialData, initialMessage)
     return runner
   }
 }

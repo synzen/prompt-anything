@@ -1,7 +1,9 @@
-export type Embed = object
+export type Format = {
+  text: string;
+}
 
 export interface ChannelInterface {
-  send: (text: string, embed?: Embed) => Promise<MessageInterface>;
+  send: (format: Format) => Promise<MessageInterface>;
 }
 
 export interface MessageInterface {

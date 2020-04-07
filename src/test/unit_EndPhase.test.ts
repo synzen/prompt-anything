@@ -1,8 +1,7 @@
-import { Format } from "../Phase"
 import { EndPhase } from '../EndPhase'
 
 describe('Unit::EndPhase', () => {
-  const phaseVis = (): Format => ({
+  const phaseVis = (): { text: string } => ({
     text: 'foobar'
   })
   const phaseFunc = async (): Promise<{}> => ({})
