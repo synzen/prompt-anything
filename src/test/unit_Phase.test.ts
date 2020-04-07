@@ -376,7 +376,7 @@ describe('Unit::Phase', () => {
     })
     describe('collector inactivity', () => {
       it('terminates on collector inactivity', async () => {
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('inactivity')
         await phaseRun
         expect(terminateSpy)
@@ -386,7 +386,7 @@ describe('Unit::Phase', () => {
     describe('collector error', () => {
       it('rejects phase run', async () => {
         const error = new Error('qateswgry')
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         const lastUserInput = createMockMessage()
         emitter.emit('error', lastUserInput, error)
         await expect(phaseRun).rejects.toThrow(error)
@@ -397,7 +397,7 @@ describe('Unit::Phase', () => {
         const error = new Rejection('qateswgry')
         const sendMessage = jest.spyOn(phase, 'sendMessage')
           .mockResolvedValue(createMockMessage())
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await phaseRun
@@ -409,7 +409,7 @@ describe('Unit::Phase', () => {
         const error = new Rejection()
         const sendMessage = jest.spyOn(phase, 'sendMessage')
           .mockResolvedValue(createMockMessage())
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await phaseRun
@@ -422,7 +422,7 @@ describe('Unit::Phase', () => {
         const sendMessageError = new Error('qawesdtg')
         jest.spyOn(phase, 'sendMessage')
           .mockRejectedValue(sendMessageError)
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('reject', createMockMessage(), error)
         emitter.emit('exit')
         await expect(phaseRun).rejects.toThrow(sendMessageError)
@@ -434,7 +434,7 @@ describe('Unit::Phase', () => {
         const acceptData = {
           foo: 1
         }
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         emitter.emit('accept', acceptMessage, acceptData)
         await expect(phaseRun).resolves.toEqual({
           message: acceptMessage,
@@ -446,7 +446,7 @@ describe('Unit::Phase', () => {
         const acceptData = {
           foo: 1
         }
-        const phaseRun = phase.collect(channel)
+        const phaseRun = phase.collect(channel, {})
         const storeUserMessage = jest.spyOn(phase, 'storeUserMessage')
         emitter.emit('accept', acceptMessage, acceptData)
         await phaseRun

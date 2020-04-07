@@ -59,7 +59,7 @@ describe('Unit::PhaseRunner', () => {
       const channel = createMockChannel()
       const phase = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
-      await expect(runner.run(phase, channel))
+      await expect(runner.run(phase, channel, {}))
         .rejects
         .toThrow('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     })
@@ -214,7 +214,7 @@ describe('Unit::PhaseRunner', () => {
         })
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase1, channel)
+      await runner.execute(phase1, channel, {})
       for (const spy of collectSpies) {
         expect(spy).toHaveBeenCalledTimes(1)
       }
@@ -225,7 +225,7 @@ describe('Unit::PhaseRunner', () => {
       phase.children = []
       const spy = jest.spyOn(phase, 'collect')
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, channel)
+      await runner.execute(phase, channel, {})
       expect(spy).not.toHaveBeenCalled()
     })
     it('adds each ran phase into this.ran', async () => {
@@ -248,7 +248,7 @@ describe('Unit::PhaseRunner', () => {
         })
       })
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phase1, channel)
+      await runner.execute(phase1, channel, {})
       expect(runner.ran).toEqual([phase1, phase2, phase3])
     })
   })
@@ -258,14 +258,14 @@ describe('Unit::PhaseRunner', () => {
       const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
       const spy = jest.spyOn(PhaseRunner.prototype, 'run')
-      await PhaseRunner.run(phase, channel)
+      await PhaseRunner.run(phase, channel, {})
       expect(spy).toHaveBeenCalledTimes(1)
     })
     it('returns the PhaseRunner', async () => {
       const channel = createMockChannel()
       const phase = new MyPhase(phaseForm, phaseFunc)
       phase.children = []
-      const returned = await PhaseRunner.run(phase, channel)
+      const returned = await PhaseRunner.run(phase, channel, {})
       expect(returned).toBeInstanceOf(PhaseRunner)
     })
   })

@@ -73,7 +73,7 @@ describe('Int::PhaseRunner', () => {
       // Either of these should not collect since they have no children
       phaseRC11.children = [phaseRC111, phaseRC112]
       const runner = new PhaseRunner<{}>()
-      await runner.execute(phaseR, channel)
+      await runner.execute(phaseR, channel, {})
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
       expect(spies[2]).toHaveBeenCalledTimes(1)
@@ -120,7 +120,7 @@ describe('Int::PhaseRunner', () => {
       phaseC21.children = []
 
       const runner = new PhaseRunner<{}>()
-      const promise = runner.run(phase, channel)
+      const promise = runner.run(phase, channel, {})
       await flushPromises()
       emitter.emit('message', createMockMessage())
       expect(runner.indexOf(phase)).toEqual(0)
