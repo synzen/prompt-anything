@@ -1,11 +1,11 @@
-import { Phase, FormatGenerator, PhaseFunction, PhaseCollectorCreator } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
 import { EventEmitter } from "events"
 
 jest.mock('../Phase')
 
 class MyPhase extends Phase<{}> {
-  createCollector: PhaseCollectorCreator<{}> = () => {
+  createCollector (): EventEmitter {
     return new EventEmitter()
   }
 
@@ -66,8 +66,6 @@ describe('Unit::PhaseRunner', () => {
     it('calls this.execute', async () => {
       jest.spyOn(PhaseRunner, 'valid')
         .mockReturnValue(true)
-      
-      const message = createMockMessage()
       const channel = createMockChannel()
       const phase = new MyPhase(phaseForm, phaseFunc)
       const runner = new PhaseRunner<{}>()
@@ -76,8 +74,8 @@ describe('Unit::PhaseRunner', () => {
       const data = {
         foo: 1
       }
-      await runner.run(phase, channel, data, message)
-      expect(spy).toHaveBeenCalledWith(phase, channel, data, message)
+      await runner.run(phase, channel, data)
+      expect(spy).toHaveBeenCalledWith(phase, channel, data)
     })
   })
   describe('validate', () => {
@@ -148,7 +146,6 @@ describe('Unit::PhaseRunner', () => {
       expect(phaseSend).toHaveBeenCalledWith(channel, data)
     })
     it('sends all phase messages', async () => {
-      const message = createMockMessage('initial message')
       const channel = createMockChannel()
       const phase1 = new MyPhase(phaseForm, phaseFunc)
       const phase2 = new MyPhase(phaseForm, phaseFunc)
@@ -160,20 +157,13 @@ describe('Unit::PhaseRunner', () => {
       jest.spyOn(phase3, 'getNext')
         .mockResolvedValue(null)
       const phases = [phase1, phase2, phase3]
-      const phasesCollectedMessages = [
-        createMockMessage('phase1 return'),
-        createMockMessage('phase2 return')
-      ]
       const phasesCollectedData = [
         { a: 1 },
         { a: 2, b: 2 }
       ]
-      const sendMessageSpies = phases.map((p, index) => {
+      const sendUserFormatMessageSpies = phases.map((p, index) => {
         jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
-        jest.spyOn(p, 'collect').mockResolvedValue({
-          data: phasesCollectedData[index],
-          message: phasesCollectedMessages[index]
-        })
+        jest.spyOn(p, 'collect').mockResolvedValue(phasesCollectedData[index])
         return jest.spyOn(p, 'sendUserFormatMessage')
       })
       const runner = new PhaseRunner<{}>()
@@ -181,15 +171,15 @@ describe('Unit::PhaseRunner', () => {
         a: 0
       }
       await runner.execute(phase1, channel, initialData)
-      expect(sendMessageSpies[0]).toHaveBeenCalledWith(
+      expect(sendUserFormatMessageSpies[0]).toHaveBeenCalledWith(
         channel,
         initialData
       )
-      expect(sendMessageSpies[1]).toHaveBeenCalledWith(
+      expect(sendUserFormatMessageSpies[1]).toHaveBeenCalledWith(
         channel,
         phasesCollectedData[0]
       )
-      expect(sendMessageSpies[2]).toHaveBeenCalledWith(
+      expect(sendUserFormatMessageSpies[2]).toHaveBeenCalledWith(
         channel,
         phasesCollectedData[1]
       )

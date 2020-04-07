@@ -361,9 +361,7 @@ describe('Unit::Phase', () => {
         foo: 'bar'
       }
       const result = await phaseNoFunc.collect(channel, data)
-      expect(result).toEqual({
-        data
-      })
+      expect(result).toEqual(data)
     })
     describe('collector exit', () => {
       it('terminates on collector exit', async () => {
@@ -436,10 +434,7 @@ describe('Unit::Phase', () => {
         }
         const phaseRun = phase.collect(channel, {})
         emitter.emit('accept', acceptMessage, acceptData)
-        await expect(phaseRun).resolves.toEqual({
-          message: acceptMessage,
-          data: acceptData
-        })
+        await expect(phaseRun).resolves.toEqual(acceptData)
       })
       it('stores the messages', async () => {
         const acceptMessage = createMockMessage()

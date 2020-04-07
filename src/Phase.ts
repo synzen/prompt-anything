@@ -3,11 +3,6 @@ import { TreeNode } from './TreeNode';
 import { MessageInterface, ChannelInterface, Format } from './types/generics';
 import { EventEmitter } from 'events';
 
-export type PhaseReturnData<T> = {
-  message?: MessageInterface;
-  data: T;
-}
-
 export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data: T) => Promise<T>
 
 export interface PhaseCollectorInterface<T> extends EventEmitter {
@@ -27,11 +22,6 @@ export interface PhaseCollectorInterface<T> extends EventEmitter {
   once(event: 'stop', listener: () => void): this;
 }
 
-export type PhaseCollectorCreator<T> = (
-  channel: ChannelInterface,
-  initialMessage?: MessageInterface
-) => PhaseCollectorInterface<T>
-
 export type FormatGenerator<T> = (data: T) => Format
 
 export type PhaseCondition<T> = (data: T) => Promise<boolean>;
@@ -42,7 +32,7 @@ export type StoredMessage = {
 }
 
 export abstract class Phase<T> extends TreeNode<Phase<T>> {
-  abstract createCollector(channel: ChannelInterface, triggerMessage?: MessageInterface): PhaseCollectorInterface<T>;
+  abstract createCollector(channel: ChannelInterface, data: T): PhaseCollectorInterface<T>;
   formatGenerator: FormatGenerator<T>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
@@ -209,25 +199,19 @@ export abstract class Phase<T> extends TreeNode<Phase<T>> {
    * 
    * @param channel The channel to collect from
    * @param data The data before this phase
-   * @param triggerMessage The message that triggered this collection
    */
-  collect (channel: ChannelInterface, data: T, triggerMessage?: MessageInterface): Promise<PhaseReturnData<T>> {
+  collect (channel: ChannelInterface, data: T): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
-        resolve({
-          data
-        })
+        resolve(data)
         return
       }
-      const collector: PhaseCollectorInterface<T> = this.createCollector(channel, triggerMessage)
+      const collector: PhaseCollectorInterface<T> = this.createCollector(channel, data)
       Phase.handleCollector(collector, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
-        const sent = await this.terminateHere(channel, terminateString)
-        resolve({
-          message: sent,
-          data
-        })
+        await this.terminateHere(channel, terminateString)
+        resolve(data)
       }
 
       collector.once('error', (lastUserInput: MessageInterface, err: Error) => {
@@ -245,10 +229,7 @@ export abstract class Phase<T> extends TreeNode<Phase<T>> {
       })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
         this.storeUserMessage(acceptMessage)
-        resolve({
-          message: acceptMessage,
-          data: acceptData
-        })
+        resolve(acceptData)
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         this.storeUserMessage(userInput)
