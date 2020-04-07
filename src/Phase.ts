@@ -42,7 +42,7 @@ export type StoredMessage = {
 }
 
 export abstract class Phase<T> extends TreeNode<Phase<T>> {
-  abstract createCollector(channel: ChannelInterface, initialMessage?: MessageInterface): PhaseCollectorInterface<T>;
+  abstract createCollector(channel: ChannelInterface, triggerMessage?: MessageInterface): PhaseCollectorInterface<T>;
   formatGenerator: FormatGenerator<T>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
