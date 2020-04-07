@@ -1,8 +1,8 @@
-import { Phase, PhaseCollectorCreator, FormatGenerator } from "../Phase"
+import { Phase } from "../Phase"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
 
-class MyPhase extends Phase<{}> {
+class MyPhase<T> extends Phase<T> {
   createCollector (): EventEmitter {
     return new EventEmitter()
   }
