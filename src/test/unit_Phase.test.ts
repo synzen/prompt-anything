@@ -311,6 +311,28 @@ describe('Unit::Phase', () => {
       expect(returned).toEqual(createdMessage)
     })
   })
+  describe('storeUserMessage', () => {
+    it('stores correctly', () => {
+      const phase = new MyPhase(phaseVis)
+      const message = createMockMessage()
+      phase.storeUserMessage(message)
+      expect(phase.messages).toEqual([{
+        message,
+        fromUser: true
+      }])
+    })
+  })
+  describe('storeBotMessage', () => {
+    it('stores correctly', () => {
+      const phase = new MyPhase(phaseVis)
+      const message = createMockMessage()
+      phase.storeBotMessage(message)
+      expect(phase.messages).toEqual([{
+        message,
+        fromUser: false
+      }])
+    })
+  })
   describe('collect', () => {
     let emitter: EventEmitter
     let phase: Phase<object>
