@@ -8,7 +8,7 @@ export type PhaseReturnData<T> = {
   data?: T;
 }
 
-export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data?: T) => Promise<T>
+export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data: T) => Promise<T>
 
 export interface PhaseCollectorInterface<T> extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
