@@ -5,9 +5,5 @@ export interface ChannelInterface {
 }
 
 export interface MessageInterface {
-  channel: ChannelInterface;
   content: string;
-  author: {
-    id: string;
-  };
 }
