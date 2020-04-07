@@ -139,7 +139,7 @@ describe('Unit::PhaseRunner', () => {
           data: {},
           message: createMockMessage()
         })
-      const phaseSend = jest.spyOn(phase, 'sendMessage')
+      const phaseSend = jest.spyOn(phase, 'sendUserFormatMessage')
       const data = {
         foo: 1
       }
@@ -174,7 +174,7 @@ describe('Unit::PhaseRunner', () => {
           data: phasesCollectedData[index],
           message: phasesCollectedMessages[index]
         })
-        return jest.spyOn(p, 'sendMessage')
+        return jest.spyOn(p, 'sendUserFormatMessage')
       })
       const runner = new PhaseRunner<{}>()
       const initialData = {

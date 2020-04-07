@@ -71,7 +71,7 @@ export class PhaseRunner<T> {
     this.ran.push(initialPhase)
     let thisPhase: Phase<T>|null = initialPhase
     let thisMessage = initialMessage
-    await thisPhase.sendMessage(channel, initialData)
+    await thisPhase.sendUserFormatMessage(channel, initialData)
     while (thisPhase && thisPhase.shouldRunCollector()) {
       const {
         data: phaseData,
@@ -83,7 +83,7 @@ export class PhaseRunner<T> {
       thisPhase = await thisPhase.getNext(phaseData)
       thisMessage = phaseMessage
       if (thisPhase) {
-        await thisPhase.sendMessage(channel, phaseData)
+        await thisPhase.sendUserFormatMessage(channel, phaseData)
         this.ran.push(thisPhase)
       }
     }
