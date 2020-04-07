@@ -1,9 +1,14 @@
 import { Phase } from './Phase'
-import { ChannelInterface, MessageInterface } from './types/generics'
+import { ChannelInterface } from './types/generics'
 
 export class PhaseRunner<T> {
+  initialData: T
   readonly ran: Array<Phase<T>> = []
   
+  constructor (initialData: T) {
+    this.initialData = initialData
+  }
+
   /**
    * Checks whether the tree of phases is valid. A valid tree
    * is one all children has a condition if there 2 or more
@@ -54,11 +59,11 @@ export class PhaseRunner<T> {
    * @param initialData Data for the root phase
    * @param triggerMessage Message that triggered this phase
    */
-  async run (phase: Phase<T>, channel: ChannelInterface, initialData: T): Promise<void> {
+  async run (phase: Phase<T>, channel: ChannelInterface): Promise<void> {
     if (!PhaseRunner.valid(phase)) {
       throw new Error('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     }
-    return this.execute(phase, channel, initialData)
+    return this.execute(phase, channel)
   }
 
   /**
@@ -68,23 +73,19 @@ export class PhaseRunner<T> {
    * @param channel Channel
    * @param initialData Data for the root phase
    */
-  async execute (initialPhase: Phase<T>, channel: ChannelInterface, initialData: T): Promise<void> {
+  async execute (initialPhase: Phase<T>, channel: ChannelInterface): Promise<void> {
     this.ran.push(initialPhase)
     let thisPhase: Phase<T>|null = initialPhase
-    await thisPhase.sendUserFormatMessage(channel, initialData)
+    let thisData = this.initialData
+    await thisPhase.sendUserFormatMessage(channel, thisData)
     while (thisPhase && thisPhase.shouldRunCollector()) {
-      const phaseData: T = await thisPhase.collect(channel, initialData)
+      const phaseData: T = await thisPhase.collect(channel, thisData)
       thisPhase = await thisPhase.getNext(phaseData)
+      thisData = phaseData
       if (thisPhase) {
         await thisPhase.sendUserFormatMessage(channel, phaseData)
         this.ran.push(thisPhase)
       }
     }
-  }
-
-  static async run<T> (initialPhase: Phase<T>, channel: ChannelInterface, initialData: T): Promise<PhaseRunner<T>> {
-    const runner = new PhaseRunner<T>()
-    await runner.run(initialPhase, channel, initialData)
-    return runner
   }
 }

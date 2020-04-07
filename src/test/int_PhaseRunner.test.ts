@@ -72,8 +72,8 @@ describe('Int::PhaseRunner', () => {
       phaseRC2.children = [phaseRC11]
       // Either of these should not collect since they have no children
       phaseRC11.children = [phaseRC111, phaseRC112]
-      const runner = new PhaseRunner<{}>()
-      await runner.execute(phaseR, channel, {})
+      const runner = new PhaseRunner<{}>({})
+      await runner.execute(phaseR, channel)
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
       expect(spies[2]).toHaveBeenCalledTimes(1)
@@ -91,8 +91,8 @@ describe('Int::PhaseRunner', () => {
         data: {},
         message: createMockMessage()
       })
-      const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, channel, () => new EventEmitter())
+      const runner = new PhaseRunner<{}>({})
+      await runner.execute(phase, channel)
       expect(spy).toHaveBeenCalledTimes(1)
     })
     it('does not run collect for EndPhase', async () => {
@@ -102,8 +102,8 @@ describe('Int::PhaseRunner', () => {
         data: {},
         message: createMockMessage()
       })
-      const runner = new PhaseRunner<{}>()
-      await runner.execute(phase, channel, () => new EventEmitter())
+      const runner = new PhaseRunner<{}>({})
+      await runner.execute(phase, channel)
       expect(spy).not.toHaveBeenCalled()
     })
   })
@@ -119,8 +119,8 @@ describe('Int::PhaseRunner', () => {
       phaseC2.children = [phaseC21]
       phaseC21.children = []
 
-      const runner = new PhaseRunner<{}>()
-      const promise = runner.run(phase, channel, {})
+      const runner = new PhaseRunner<{}>({})
+      const promise = runner.run(phase, channel)
       await flushPromises()
       emitter.emit('message', createMockMessage())
       expect(runner.indexOf(phase)).toEqual(0)
@@ -163,10 +163,10 @@ describe('Int::PhaseRunner', () => {
         return data
       }
       const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
-        return !!(data && data.age && data.age >= 20)
+        return !!(data.age && data.age >= 20)
       }
       const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
-        return !!(data && data.age && data.age < 20)
+        return !!(data.age && data.age < 20)
       }
 
       const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
@@ -180,8 +180,8 @@ describe('Int::PhaseRunner', () => {
       const name = 'George'
       const age = '30'
       
-      const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, channel, {})
+      const runner = new PhaseRunner<PhaseData>({})
+      const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name
@@ -235,12 +235,12 @@ describe('Int::PhaseRunner', () => {
       const tooOldFnSpy = jest.fn()
       const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
         tooOldFnSpy()
-        return !!(data && data.age && data.age >= 20)
+        return !!(data.age && data.age >= 20)
       }
       const tooYoungFnSpy = jest.fn()
       const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
         tooYoungFnSpy()
-        return !!(data && data.age && data.age < 20)
+        return !!(data.age && data.age < 20)
       }
       const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
       const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
@@ -251,8 +251,8 @@ describe('Int::PhaseRunner', () => {
       const channel = createMockChannel()
       const name = 'George'
       const age = '30'
-      const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, channel, {})
+      const runner = new PhaseRunner<PhaseData>({})
+      const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name
@@ -279,10 +279,10 @@ describe('Int::PhaseRunner', () => {
         }
       })
       const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
-        return !!(data && data.age && data.age >= 20)
+        return !!(data.age && data.age >= 20)
       }
       const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
-        return !!(data && data.age && data.age < 20)
+        return !!(data.age && data.age < 20)
       }
       const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
       const tooYoung = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
@@ -314,8 +314,8 @@ describe('Int::PhaseRunner', () => {
       const channel = createMockChannel()
       const name = 'George'
       const age = '30'
-      const runner = new PhaseRunner<PhaseData>()
-      const promise = runner.run(askName, channel, {})
+      const runner = new PhaseRunner<PhaseData>({})
+      const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
       // Accept the name
