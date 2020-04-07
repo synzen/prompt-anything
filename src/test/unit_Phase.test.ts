@@ -193,7 +193,7 @@ describe('Unit::Phase', () => {
         .mockReturnValue(generatedFormat)
       const sendMessage = jest.spyOn(phase, 'sendMessage')
         .mockResolvedValue(generatedMessage)
-      await phase.sendUserFormatMessage(channel)
+      await phase.sendUserFormatMessage(channel, {})
       expect(sendMessage).toHaveBeenCalledWith(generatedFormat, channel)
     })
     it('returns what sendMessage returns', async () => {
@@ -204,7 +204,7 @@ describe('Unit::Phase', () => {
         .mockReturnValue({ text: 'aedf' })
       jest.spyOn(phase, 'sendMessage')
         .mockResolvedValue(generatedMessage)
-      const returned = await phase.sendUserFormatMessage(channel)
+      const returned = await phase.sendUserFormatMessage(channel, {})
       expect(returned).toEqual(generatedMessage)
     })
   })

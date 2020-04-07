@@ -54,7 +54,7 @@ export class PhaseRunner<T> {
    * @param initialData Data for the root phase
    * @param triggerMessage Message that triggered this phase
    */
-  async run (phase: Phase<T>, channel: ChannelInterface, initialData?: T, triggerMessage?: MessageInterface): Promise<void> {
+  async run (phase: Phase<T>, channel: ChannelInterface, initialData: T, triggerMessage?: MessageInterface): Promise<void> {
     if (!PhaseRunner.valid(phase)) {
       throw new Error('Invalid phase found. Phases with more than 1 child must have all its children to have a condition function specified.')
     }
@@ -68,7 +68,7 @@ export class PhaseRunner<T> {
    * @param channel Channel
    * @param initialData Data for the root phase
    */
-  async execute (initialPhase: Phase<T>, channel: ChannelInterface, initialData?: T, triggerMessage?: MessageInterface): Promise<void> {
+  async execute (initialPhase: Phase<T>, channel: ChannelInterface, initialData: T, triggerMessage?: MessageInterface): Promise<void> {
     this.ran.push(initialPhase)
     let thisPhase: Phase<T>|null = initialPhase
     let thisMessage = triggerMessage
@@ -78,7 +78,7 @@ export class PhaseRunner<T> {
         data: phaseData,
         message: phaseMessage
       }: {
-        data?: T;
+        data: T;
         message?: MessageInterface;
       } = await thisPhase.collect(channel, initialData, thisMessage)
       thisPhase = await thisPhase.getNext(phaseData)
@@ -90,7 +90,7 @@ export class PhaseRunner<T> {
     }
   }
 
-  static async run<T> (initialPhase: Phase<T>, channel: ChannelInterface, initialData?: T, triggerMessage?: MessageInterface): Promise<PhaseRunner<T>> {
+  static async run<T> (initialPhase: Phase<T>, channel: ChannelInterface, initialData: T, triggerMessage?: MessageInterface): Promise<PhaseRunner<T>> {
     const runner = new PhaseRunner<T>()
     await runner.run(initialPhase, channel, initialData, triggerMessage)
     return runner

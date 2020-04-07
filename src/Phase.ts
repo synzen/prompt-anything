@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 
 export type PhaseReturnData<T> = {
   message?: MessageInterface;
-  data?: T;
+  data: T;
 }
 
 export type PhaseFunction<T> = (this: Phase<T>, m: MessageInterface, data: T) => Promise<T>
@@ -32,9 +32,9 @@ export type PhaseCollectorCreator<T> = (
   initialMessage?: MessageInterface
 ) => PhaseCollectorInterface<T>
 
-export type FormatGenerator<T> = (data?: T) => Format
+export type FormatGenerator<T> = (data: T) => Format
 
-export type PhaseCondition<T> = (data?: T) => Promise<boolean>;
+export type PhaseCondition<T> = (data: T) => Promise<boolean>;
 
 export type StoredMessage = {
   message: MessageInterface;
@@ -145,7 +145,7 @@ export abstract class Phase<T> extends TreeNode<Phase<T>> {
    * @param message The MessageInterface before this phase
    * @param data Data to generate the user's message
    */
-  async sendUserFormatMessage (channel: ChannelInterface, data?: T): Promise<MessageInterface> {
+  async sendUserFormatMessage (channel: ChannelInterface, data: T): Promise<MessageInterface> {
     const format = this.formatGenerator(data)
     return this.sendMessage(format, channel)
   }
@@ -168,7 +168,7 @@ export abstract class Phase<T> extends TreeNode<Phase<T>> {
    * 
    * @param data The data before this phase
    */
-  async getNext (data?: T): Promise<Phase<T>|null> {
+  async getNext (data: T): Promise<Phase<T>|null> {
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
@@ -211,7 +211,7 @@ export abstract class Phase<T> extends TreeNode<Phase<T>> {
    * @param data The data before this phase
    * @param triggerMessage The message that triggered this collection
    */
-  collect (channel: ChannelInterface, data?: T, triggerMessage?: MessageInterface): Promise<PhaseReturnData<T>> {
+  collect (channel: ChannelInterface, data: T, triggerMessage?: MessageInterface): Promise<PhaseReturnData<T>> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
         resolve({
