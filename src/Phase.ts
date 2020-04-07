@@ -1,6 +1,6 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { MessageInterface, ChannelInterface, Format } from './types/discord';
+import { MessageInterface, ChannelInterface, Format } from './types/generics';
 import { EventEmitter } from 'events';
 
 export type PhaseReturnData<T> = {

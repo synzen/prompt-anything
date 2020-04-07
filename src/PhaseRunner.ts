@@ -1,5 +1,5 @@
 import { Phase } from './Phase'
-import { ChannelInterface, MessageInterface } from './types/discord'
+import { ChannelInterface, MessageInterface } from './types/generics'
 
 export class PhaseRunner<T> {
   readonly ran: Array<Phase<T>> = []

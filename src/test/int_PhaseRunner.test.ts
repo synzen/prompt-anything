@@ -1,4 +1,4 @@
-import { Phase, FormatGenerator, PhaseFunction, PhaseCondition, PhaseCollectorCreator } from "../Phase"
+import { Phase, FormatGenerator, PhaseFunction, PhaseCondition } from "../Phase"
 import { PhaseRunner } from '../PhaseRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
