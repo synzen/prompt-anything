@@ -281,34 +281,11 @@ describe('Unit::Prompt', () => {
   describe('terminateHere', () => {
     it('clears the children', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      const message = createMockMessage()
       prompt.children = [
         new MyPrompt(promptVis, promptFunc)
       ]
-      await prompt.terminateHere(message.channel, 'abc')
+      await prompt.terminateHere()
       expect(prompt.children).toEqual([])
-    })
-    it('sends the message', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const channel = createMockChannel()
-      prompt.children = []
-      const messageString = 'q3et4wr'
-      const sendMessage = jest.spyOn(prompt, 'sendMessage')
-        .mockResolvedValue(createMockMessage())
-      await prompt.terminateHere(channel, messageString)
-      expect(sendMessage).toHaveBeenCalledWith({
-        text: messageString
-      }, channel)
-    })
-    it('returns the message sent', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const createdMessage = createMockMessage()
-      const channel = createMockChannel()
-      prompt.children = []
-      jest.spyOn(prompt, 'sendMessage')
-        .mockResolvedValue(createdMessage)
-      const returned = await prompt.terminateHere(channel, 'asfde')
-      expect(returned).toEqual(createdMessage)
     })
   })
   describe('storeUserMessage', () => {
@@ -343,7 +320,7 @@ describe('Unit::Prompt', () => {
       prompt = new MyPrompt(promptVis, promptFunc)
       channel = createMockChannel()
       terminateSpy = jest.spyOn(prompt, 'terminateHere')
-        .mockResolvedValue(createMockMessage())
+        .mockReturnValue()
       jest.spyOn(MyPrompt.prototype, 'createCollector')
         .mockReturnValue(emitter)
       jest.spyOn(MyPrompt.prototype, 'storeUserMessage')
@@ -369,7 +346,16 @@ describe('Unit::Prompt', () => {
         emitter.emit('exit')
         await promptRun
         expect(terminateSpy)
-          .toHaveBeenCalledWith(channel, Prompt.STRINGS.exit)
+          .toHaveBeenCalledTimes(1)
+      })
+      it('stores the user message', async () => {
+        const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
+        const promptRun = prompt.collect(channel, {})
+        const exitMessage = createMockMessage()
+        emitter.emit('exit', exitMessage)
+        await promptRun
+        expect(storeUserMessage)
+          .toHaveBeenCalledWith(exitMessage)
       })
     })
     describe('collector inactivity', () => {
@@ -378,52 +364,31 @@ describe('Unit::Prompt', () => {
         emitter.emit('inactivity')
         await promptRun
         expect(terminateSpy)
-          .toHaveBeenCalledWith(channel, Prompt.STRINGS.inactivity)
+          .toHaveBeenCalledTimes(1)
       })
     })
     describe('collector error', () => {
       it('rejects prompt run', async () => {
         const error = new Error('qateswgry')
+        const spy = jest.spyOn(prompt, 'storeUserMessage')
         const promptRun = prompt.collect(channel, {})
         const lastUserInput = createMockMessage()
         emitter.emit('error', lastUserInput, error)
         await expect(promptRun).rejects.toThrow(error)
+        expect(spy).toHaveBeenCalledWith(lastUserInput)
       })
     })
     describe('collector reject', () => {
-      it('sends the custom error message', async () => {
+      it('stores the user message', async () => {
         const error = new Rejection('qateswgry')
-        const sendMessage = jest.spyOn(prompt, 'sendMessage')
-          .mockResolvedValue(createMockMessage())
+        const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
+        const rejectedMessage = createMockMessage()
         const promptRun = prompt.collect(channel, {})
-        emitter.emit('reject', createMockMessage(), error)
+        emitter.emit('reject', rejectedMessage, error)
         emitter.emit('exit')
         await promptRun
-        expect(sendMessage).toHaveBeenCalledWith({
-          text: error.message
-        }, channel)
-      })
-      it('sends a fallback error message if no error message', async () => {
-        const error = new Rejection()
-        const sendMessage = jest.spyOn(prompt, 'sendMessage')
-          .mockResolvedValue(createMockMessage())
-        const promptRun = prompt.collect(channel, {})
-        emitter.emit('reject', createMockMessage(), error)
-        emitter.emit('exit')
-        await promptRun
-        expect(sendMessage).toHaveBeenCalledWith({
-          text: Prompt.STRINGS.rejected
-        }, channel)
-      })
-      it('rejects if sendMessage fails', async () => {
-        const error = new Rejection()
-        const sendMessageError = new Error('qawesdtg')
-        jest.spyOn(prompt, 'sendMessage')
-          .mockRejectedValue(sendMessageError)
-        const promptRun = prompt.collect(channel, {})
-        emitter.emit('reject', createMockMessage(), error)
-        emitter.emit('exit')
-        await expect(promptRun).rejects.toThrow(sendMessageError)
+        expect(storeUserMessage)
+          .toHaveBeenCalledWith(rejectedMessage)
       })
     })
     describe('collector accept', () => {

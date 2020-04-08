@@ -38,11 +38,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<T>
   readonly condition?: PromptCondition<T>
-  public static STRINGS = {
-    exit: `Menu has been closed.`,
-    inactivity: 'Menu has been closed due to inactivity.',
-    rejected: `That is not a valid input. Try again.`
-  }
 
   constructor(formatGenerator: FormatGenerator<T>, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 60000) {
     super()
@@ -142,15 +137,12 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
 
   /**
    * Set all children to empty so there is no next prompt.
-   * 
-   * @param channel The channel to send the terminate message to
-   * @param terminateString String to send as a message saying the termination
    */
-  async terminateHere (channel: ChannelInterface, terminateString: string): Promise<MessageInterface> {
+  terminateHere (): void {
     this.setChildren([])
-    return this.sendMessage({
-      text: terminateString
-    }, channel)
+    // return this.sendMessage({
+    //   text: terminateString
+    // }, channel)
   }
 
   /**
@@ -209,23 +201,18 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
       const collector: PromptCollector<T> = this.createCollector(channel, data)
       Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
 
-      const terminate = async (terminateString: string): Promise<void> => {
-        await this.terminateHere(channel, terminateString)
-        resolve(data)
-      }
-
       collector.once('error', (lastUserInput: MessageInterface, err: Error) => {
         this.storeUserMessage(lastUserInput)
         reject(err)
       })
       collector.once('inactivity', (): void => {
-        terminate(Prompt.STRINGS.inactivity)
-          .catch(reject)
+        this.terminateHere()
+        resolve(data)
       })
       collector.once('exit', (exitMessage: MessageInterface) => {
         this.storeUserMessage(exitMessage)
-        terminate(Prompt.STRINGS.exit)
-          .catch(reject)
+        this.terminateHere()
+        resolve(data)
       })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
         this.storeUserMessage(acceptMessage)
@@ -233,10 +220,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         this.storeUserMessage(userInput)
-        const invalidFeedback = err.message || Prompt.STRINGS.rejected
-        this.sendMessage({
-          text: invalidFeedback
-        }, channel).catch(reject)
       })
     })
   }

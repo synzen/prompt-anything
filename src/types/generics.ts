@@ -1,4 +1,4 @@
-export type FormatInterface = {
+export interface FormatInterface {
   text: string;
 }
 
