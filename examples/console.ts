@@ -73,18 +73,22 @@ class ConsolePrompt<T> extends Prompt<T> {
     // Optional
     emitter.on('reject', (message: ConsoleMessage, error: Rejection) => {
       this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
+        .catch(err => emitter.emit('error', err))
     })
     // Optional
     emitter.once('inactivity', () => {
       this.sendMessage(ConsolePrompt.inactivityFormat, channel)
+        .catch(err => emitter.emit('error', err))
     })
     // Optional
     emitter.once('error', (error: Error) => {
       this.sendMessage(ConsolePrompt.getErrorFormat(error), channel)
+        .catch(console.error)
     })
     // Optional
     emitter.once('exit', (message: ConsoleMessage) => {
       this.sendMessage(ConsolePrompt.exitFormat, channel)
+        .catch(err => emitter.emit('error', err))
     })
     return emitter
   }
