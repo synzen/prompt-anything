@@ -1,6 +1,6 @@
 import { Rejection } from './errors/Rejection'
 import { TreeNode } from './TreeNode';
-import { MessageInterface, ChannelInterface, Format } from './types/generics';
+import { MessageInterface, ChannelInterface, FormatInterface } from './types/generics';
 import { EventEmitter } from 'events';
 
 export type PromptFunction<T> = (this: Prompt<T>, m: MessageInterface, data: T) => Promise<T>
@@ -22,7 +22,7 @@ export interface PromptCollectorInterface<T> extends EventEmitter {
   once(event: 'stop', listener: () => void): this;
 }
 
-export type FormatGenerator<T> = (data: T) => Format
+export type FormatGenerator<T> = (data: T) => FormatInterface
 
 export type PromptCondition<T> = (data: T) => Promise<boolean>;
 
@@ -123,7 +123,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param format The format for channel.send to send
    * @param channel Channel to send the message to
    */
-  async sendMessage (format: Format, channel: ChannelInterface): Promise<MessageInterface> {
+  async sendMessage (format: FormatInterface, channel: ChannelInterface): Promise<MessageInterface> {
     const sent = await channel.send(format)
     this.storeBotMessage(sent)
     return sent
