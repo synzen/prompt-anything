@@ -1,10 +1,9 @@
 import { Rejection } from './errors/Rejection'
 
-export * from './Phase'
-export * from './EndPhase'
-export * from './PhaseRunner'
+export * from './Prompt'
+export * from './PromptRunner'
 export * from './types/generics'
 
-export const PhaseErrors = {
+export const Errors = {
   Rejection
 }

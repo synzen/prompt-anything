@@ -1,8 +1,7 @@
-import { Phase, FormatGenerator, PhaseFunction, PhaseCondition } from "../Phase"
-import { PhaseRunner } from '../PhaseRunner'
+import { Prompt, FormatGenerator, PromptFunction, PromptCondition } from "../Prompt"
+import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
-import { EndPhase } from "../EndPhase";
 
 async function flushPromises(): Promise<void> {
   return new Promise(resolve => {
@@ -26,41 +25,41 @@ const createMockMessage = (content = ''): MockMessage => ({
   content
 })
 
-const phaseForm: FormatGenerator<{}> = () => ({
+const promptForm: FormatGenerator<{}> = () => ({
   text: '1',
   embed: {
     title: '1'
   }
 })
-const phaseFunc: PhaseFunction<{}> = async () => ({})
+const promptFunc: PromptFunction<{}> = async () => ({})
 
-class MyPhase<T> extends Phase<T> {
+class MyPrompt<T> extends Prompt<T> {
   createCollector (): EventEmitter {
     return new EventEmitter()
   }
 }
 
-describe('Int::PhaseRunner', () => {
+describe('Int::PromptRunner', () => {
   let emitter = new EventEmitter()
   beforeEach(() => {
     emitter = new EventEmitter()
-    jest.spyOn(MyPhase.prototype, 'createCollector')
+    jest.spyOn(MyPrompt.prototype, 'createCollector')
       .mockReturnValue(emitter)
   })
   afterEach(() => {
     jest.restoreAllMocks()
   })
   describe('execute', () => {
-    it('runs the right phases (ignoring collect)', async () => {
+    it('runs the right prompts (ignoring collect)', async () => {
       const channel = createMockChannel()
-      const phaseR = new MyPhase(phaseForm, phaseFunc)
-      const phaseRC1 = new MyPhase(phaseForm, phaseFunc, async () => false)
-      const phaseRC2 = new MyPhase(phaseForm, phaseFunc, async () => true)
-      const phaseRC11 = new MyPhase(phaseForm, phaseFunc)
-      const phaseRC111 = new EndPhase(phaseForm, phaseFunc, async () => true)
-      const phaseRC112 = new EndPhase(phaseForm, phaseFunc, async () => false)
-      const phases = [phaseR, phaseRC1, phaseRC2, phaseRC11, phaseRC111, phaseRC112]
-      const spies = phases.map(p => {
+      const promptR = new MyPrompt(promptForm, promptFunc)
+      const promptRC1 = new MyPrompt(promptForm, promptFunc, async () => false)
+      const promptRC2 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const promptRC11 = new MyPrompt(promptForm, promptFunc)
+      const promptRC111 = new MyPrompt(promptForm, undefined, async () => true)
+      const promptRC112 = new MyPrompt(promptForm, undefined, async () => false)
+      const prompts = [promptR, promptRC1, promptRC2, promptRC11, promptRC111, promptRC112]
+      const spies = prompts.map(p => {
         p.children = []
         return jest.spyOn(p, 'collect').mockResolvedValue({
           data: {},
@@ -68,81 +67,78 @@ describe('Int::PhaseRunner', () => {
         })
       })
 
-      phaseR.children = [phaseRC1, phaseRC2]
-      phaseRC2.children = [phaseRC11]
+      promptR.children = [promptRC1, promptRC2]
+      promptRC2.children = [promptRC11]
       // Either of these should not collect since they have no children
-      phaseRC11.children = [phaseRC111, phaseRC112]
-      const runner = new PhaseRunner<{}>({})
-      await runner.execute(phaseR, channel)
+      promptRC11.children = [promptRC111, promptRC112]
+      const runner = new PromptRunner<{}>({})
+      await runner.execute(promptR, channel)
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
       expect(spies[2]).toHaveBeenCalledTimes(1)
       expect(spies[3]).toHaveBeenCalledTimes(1)
-      expect(spies[4]).not.toHaveBeenCalled()
+      expect(spies[4]).toHaveBeenCalledTimes(1)
       expect(spies[5]).not.toHaveBeenCalled()
-      expect(runner.indexesOf(phases)).toEqual([
+      expect(runner.indexesOf(prompts)).toEqual([
         0, -1, 1, 2, 3, -1
       ])
     })
-    it('runs collect for regular Phase even if no children', async () => {
+    it('runs collect for regular Prompt even if no children', async () => {
       const channel = createMockChannel()
-      const phase = new MyPhase(phaseForm, phaseFunc)
-      const spy = jest.spyOn(phase, 'collect').mockResolvedValue({
+      const prompt = new MyPrompt(promptForm, promptFunc)
+      const spy = jest.spyOn(prompt, 'collect').mockResolvedValue({
         data: {},
         message: createMockMessage()
       })
-      const runner = new PhaseRunner<{}>({})
-      await runner.execute(phase, channel)
+      const runner = new PromptRunner<{}>({})
+      await runner.execute(prompt, channel)
       expect(spy).toHaveBeenCalledTimes(1)
     })
-    it('does not run collect for EndPhase', async () => {
+    it('does not run collect for prompt with no function', async () => {
       const channel = createMockChannel()
-      const phase = new EndPhase(phaseForm, phaseFunc)
-      const spy = jest.spyOn(phase, 'collect').mockResolvedValue({
-        data: {},
-        message: createMockMessage()
-      })
-      const runner = new PhaseRunner<{}>({})
-      await runner.execute(phase, channel)
+      const prompt = new MyPrompt(promptForm)
+      const spy = jest.spyOn(prompt, 'createCollector')
+      const runner = new PromptRunner<{}>({})
+      await runner.execute(prompt, channel)
       expect(spy).not.toHaveBeenCalled()
     })
   })
   describe('run', () => {
-    it('works with phase collect and getNext', async () => {
+    it('works with prompt collect and getNext', async () => {
       const channel = createMockChannel()
-      const phase = new MyPhase(phaseForm, phaseFunc)
-      const phaseC1 = new MyPhase(phaseForm, phaseFunc, async () => false)
-      const phaseC2 = new MyPhase(phaseForm, phaseFunc, async () => true)
-      const phaseC21 = new EndPhase(phaseForm, phaseFunc)
+      const prompt = new MyPrompt(promptForm, promptFunc)
+      const promptC1 = new MyPrompt(promptForm, promptFunc, async () => false)
+      const promptC2 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const promptC21 = new MyPrompt(promptForm)
 
-      phase.children = [phaseC1, phaseC2]
-      phaseC2.children = [phaseC21]
-      phaseC21.children = []
+      prompt.children = [promptC1, promptC2]
+      promptC2.children = [promptC21]
+      promptC21.children = []
 
-      const runner = new PhaseRunner<{}>({})
-      const promise = runner.run(phase, channel)
+      const runner = new PromptRunner<{}>({})
+      const promise = runner.run(prompt, channel)
       await flushPromises()
       emitter.emit('message', createMockMessage())
-      expect(runner.indexOf(phase)).toEqual(0)
+      expect(runner.indexOf(prompt)).toEqual(0)
       await flushPromises()
       emitter.emit('message', createMockMessage())
-      expect(runner.indexOf(phaseC1)).toEqual(-1)
-      expect(runner.indexOf(phaseC2)).toEqual(1)
+      expect(runner.indexOf(promptC1)).toEqual(-1)
+      expect(runner.indexOf(promptC2)).toEqual(1)
       await promise
-      expect(runner.indexOf(phaseC21)).toEqual(2)
+      expect(runner.indexOf(promptC21)).toEqual(2)
     })
     it('works with custom functions', async () => {
-      type PhaseData = {
+      type PromptData = {
         age?: number;
         name?: string;
       }
-      const thisPhaseForm: FormatGenerator<PhaseData> = () => ({
+      const thisPromptForm: FormatGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'
         }
       })
-      const askNameFn: PhaseFunction<PhaseData> = async (m, data) => {
+      const askNameFn: PromptFunction<PromptData> = async (m, data) => {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -150,8 +146,8 @@ describe('Int::PhaseRunner', () => {
         return data
       }
       
-      // Ask age phase that collects messages
-      const askAgeFn: PhaseFunction<PhaseData> = async (m, data) => {
+      // Ask age prompt that collects messages
+      const askAgeFn: PromptFunction<PromptData> = async (m, data) => {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -162,17 +158,17 @@ describe('Int::PhaseRunner', () => {
         data.age = Number(m.content)
         return data
       }
-      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooOldFn: PromptCondition<PromptData> = async (data) => {
         return !!(data.age && data.age >= 20)
       }
-      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooYoungFn: PromptCondition<PromptData> = async (data) => {
         return !!(data.age && data.age < 20)
       }
 
-      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
-      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
-      const tooOld = new MyPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
-      const tooYoung = new MyPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
+      const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn)
+      const askAge = new MyPrompt<PromptData>(thisPromptForm, askAgeFn)
+      const tooOld = new MyPrompt<PromptData>(thisPromptForm, undefined, tooOldFn)
+      const tooYoung = new MyPrompt<PromptData>(thisPromptForm, undefined, tooYoungFn)
       askName.setChildren([askAge])
       askAge.setChildren([tooOld, tooYoung])
       
@@ -180,7 +176,7 @@ describe('Int::PhaseRunner', () => {
       const name = 'George'
       const age = '30'
       
-      const runner = new PhaseRunner<PhaseData>({})
+      const runner = new PromptRunner<PromptData>({})
       const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
@@ -197,18 +193,18 @@ describe('Int::PhaseRunner', () => {
         .toEqual([2, -1])
     })
     it('calls all functions', async () => {
-      type PhaseData = {
+      type PromptData = {
         age?: number;
         name?: string;
       }
-      const thisPhaseForm: FormatGenerator<PhaseData> = () => ({
+      const thisPromptForm: FormatGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'
         }
       })
       const askNameFnSpy = jest.fn()
-      const askNameFn: PhaseFunction<PhaseData> = async (m, data) => {
+      const askNameFn: PromptFunction<PromptData> = async (m, data) => {
         askNameFnSpy()
         if (!data) {
           throw new Error('Missing data')
@@ -216,11 +212,11 @@ describe('Int::PhaseRunner', () => {
         data.name = m.content
         return data
       }
-      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
+      const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn)
       
-      // Ask age phase that collects messages
+      // Ask age prompt that collects messages
       const askAgeFnSpy = jest.fn()
-      const askAgeFn: PhaseFunction<PhaseData> = async (m, data) => {
+      const askAgeFn: PromptFunction<PromptData> = async (m, data) => {
         askAgeFnSpy()
         if (!data) {
           throw new Error('Missing data')
@@ -233,25 +229,25 @@ describe('Int::PhaseRunner', () => {
         return data
       }
       const tooOldFnSpy = jest.fn()
-      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooOldFn: PromptCondition<PromptData> = async (data) => {
         tooOldFnSpy()
         return !!(data.age && data.age >= 20)
       }
       const tooYoungFnSpy = jest.fn()
-      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooYoungFn: PromptCondition<PromptData> = async (data) => {
         tooYoungFnSpy()
         return !!(data.age && data.age < 20)
       }
-      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
-      const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
-      const tooYoung = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
+      const askAge = new MyPrompt<PromptData>(thisPromptForm, askAgeFn)
+      const tooOld = new MyPrompt<PromptData>(thisPromptForm, undefined, tooOldFn)
+      const tooYoung = new MyPrompt<PromptData>(thisPromptForm, undefined, tooYoungFn)
       askName.setChildren([askAge])
       askAge.setChildren([tooOld, tooYoung])
       
       const channel = createMockChannel()
       const name = 'George'
       const age = '30'
-      const runner = new PhaseRunner<PhaseData>({})
+      const runner = new PromptRunner<PromptData>({})
       const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
@@ -268,26 +264,26 @@ describe('Int::PhaseRunner', () => {
       expect(tooYoungFnSpy).not.toHaveBeenCalled()
     })
     it('works with functions added mid-run', async () => {
-      type PhaseData = {
+      type PromptData = {
         age?: number;
         name?: string;
       }
-      const thisPhaseForm: FormatGenerator<PhaseData> = () => ({
+      const thisPromptForm: FormatGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'
         }
       })
-      const tooOldFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooOldFn: PromptCondition<PromptData> = async (data) => {
         return !!(data.age && data.age >= 20)
       }
-      const tooYoungFn: PhaseCondition<PhaseData> = async (data) => {
+      const tooYoungFn: PromptCondition<PromptData> = async (data) => {
         return !!(data.age && data.age < 20)
       }
-      const tooOld = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooOldFn)
-      const tooYoung = new EndPhase<PhaseData>(thisPhaseForm, undefined, tooYoungFn)
-      // Ask age phase that collects messages
-      const askAgeFn: PhaseFunction<PhaseData> = async function (m, data) {
+      const tooOld = new MyPrompt<PromptData>(thisPromptForm, undefined, tooOldFn)
+      const tooYoung = new MyPrompt<PromptData>(thisPromptForm, undefined, tooYoungFn)
+      // Ask age prompt that collects messages
+      const askAgeFn: PromptFunction<PromptData> = async function (m, data) {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -299,9 +295,9 @@ describe('Int::PhaseRunner', () => {
         this.setChildren([tooYoung, tooOld])
         return data
       }
-      const askAge = new MyPhase<PhaseData>(thisPhaseForm, askAgeFn)
+      const askAge = new MyPrompt<PromptData>(thisPromptForm, askAgeFn)
       
-      const askNameFn: PhaseFunction<PhaseData> = async function (m, data) {
+      const askNameFn: PromptFunction<PromptData> = async function (m, data) {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -309,12 +305,12 @@ describe('Int::PhaseRunner', () => {
         this.setChildren([askAge])
         return data
       }
-      const askName = new MyPhase<PhaseData>(thisPhaseForm, askNameFn)
+      const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn)
 
       const channel = createMockChannel()
       const name = 'George'
       const age = '30'
-      const runner = new PhaseRunner<PhaseData>({})
+      const runner = new PromptRunner<PromptData>({})
       const promise = runner.run(askName, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
