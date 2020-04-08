@@ -2,10 +2,9 @@ import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector
 import { EventEmitter } from 'events'
 import { createInterface } from 'readline'
 
-type AgePromptData = {
-  name?: string;
-  age?: number;
-}
+/**
+ * Implement relevant interfaces for console use
+ */
 
 class ConsoleFormat implements FormatInterface {
   text: string
@@ -17,14 +16,12 @@ class ConsoleFormat implements FormatInterface {
   }
 }
 
-
 class ConsoleMessage implements MessageInterface {
   content: string
   constructor (message: string) {
     this.content = message
   }
 }
-
 
 class ConsoleChannel implements ChannelInterface {
   async send (format: ConsoleFormat): Promise<ConsoleMessage> {
@@ -91,6 +88,15 @@ class ConsolePrompt<T> extends Prompt<T> {
     })
     return emitter
   }
+}
+
+/**
+ * Now create the actual prompts
+ */
+
+type AgePromptData = {
+  name?: string;
+  age?: number;
 }
 
 // Ask name Prompt that collects messages
