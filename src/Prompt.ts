@@ -39,7 +39,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   readonly function?: PromptFunction<T>
   readonly condition?: PromptCondition<T>
 
-  constructor(formatGenerator: FormatGenerator<T>, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 60000) {
+  constructor(formatGenerator: FormatGenerator<T>, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 0) {
     super()
     this.formatGenerator = formatGenerator
     this.duration = duration
