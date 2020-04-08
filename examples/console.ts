@@ -57,8 +57,15 @@ class ConsolePrompt<T> extends Prompt<T> {
       output: process.stdout
     })
     readline.on('line', (line: string) => {
-      // REQUIRED
-      emitter.emit('message', new ConsoleMessage(line))
+      const message = new ConsoleMessage(line)
+      if (line === 'exit') {
+        // Exits are optional
+        emitter.emit('exit', message)
+      } else {
+        // REQUIRED
+        // but emitting messages are required
+        emitter.emit('message', message)
+      }
     })
     // REQUIRED
     emitter.once('stop', () => {
