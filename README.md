@@ -40,6 +40,9 @@ class MyPrompt<T> extends Prompt<T> {
   }
 }
 ```
+### Example
+
+See the `examples/console.ts` for an implementation that accepts input from the console.
 
 ## Testing
 
