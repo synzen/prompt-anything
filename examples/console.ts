@@ -71,6 +71,11 @@ class ConsolePrompt<T> extends Prompt<T> {
     emitter.once('stop', () => {
       readline.close()
     })
+    this.optionalHandlers(emitter, channel)
+    return emitter
+  }
+
+  optionalHandlers (emitter: PromptCollector<T>, channel: ChannelInterface): void {
     // Optional
     emitter.on('reject', (message: ConsoleMessage, error: Rejection) => {
       this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
@@ -86,7 +91,6 @@ class ConsolePrompt<T> extends Prompt<T> {
       this.sendMessage(ConsolePrompt.exitFormat, channel)
         .catch(err => emitter.emit('error', err))
     })
-    return emitter
   }
 }
 
@@ -122,15 +126,15 @@ const askAge = new ConsolePrompt((data): ConsoleFormat => ({
   newline: true
 }), askAgeFn)
 
-// Conditional Prompt with no collector (ConsolePrompt)
+// Conditional Prompt with no collector via undefined function
 const tooOld = new ConsolePrompt<AgePromptData>((data) => ({
-  text: `Wow ${data.name}, you are pretty old at ${data.age} years old!`
-}), undefined, async (data) => !!data.age && data.age > 20)
+  text: `Welcome ${data.name}, at ${data.age} you can freely drink.`
+}), undefined, async (data) => !!data.age && data.age > 21)
 
-// Conditional Prompt with no collector (ConsolePrompt)
+// Conditional Prompt with no collector via undefined function
 const tooYoung = new ConsolePrompt<AgePromptData>((data) => ({
-  text: `Wow ${data.name}, you are pretty young at ${data.age} years old!`
-}), undefined, async (data) => !!data.age && data.age <= 20)
+  text: `Woah ${data.name}, at ${data.age} you can't drink yet.`
+}), undefined, async (data) => !!data.age && data.age <= 21)
 
 askName.setChildren([askAge])
 // Nodes with more than 1 sibling must have conditions defined
