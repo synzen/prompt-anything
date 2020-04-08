@@ -27,14 +27,26 @@ The `Prompt` method must be extended to implement the abstract method `createCol
 class MyPrompt<T> extends Prompt<T> {
   createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
     const emitter = new EventEmitter()
+    // REQUIRED
     // Collect your messages via your listeners, and return an emitter that follows these rules
     myCollector.on('message', (message: MessageInterface) => {
       // Emit the messages from your collector here
       emitter.emit('message', message)
     })
+    // REQUIRED
     emitter.once('stop', () => {
       // Stop your collector here
       myCollector.stop()
+    })
+    // Optional
+    emitter.on('reject', (message: ConsoleMessage, error: Rejection) => {
+      this.sendMessage('My rejection message', channel)
+        .catch(err => emitter.emit('error', err))
+    })
+    // Optional. Not needed if there is no timeout.
+    emitter.once('inactivity', () => {
+      this.sendMessage('You took too long to answer!', channel)
+        .catch(err => emitter.emit('error', err))
     })
     return emitter
   }
