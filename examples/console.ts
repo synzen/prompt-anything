@@ -133,3 +133,7 @@ askAge.setChildren([tooOld, tooYoung])
 const runner = new PromptRunner({})
 const channel = new ConsoleChannel()
 runner.run(askName, channel)
+  .catch(err => {
+    // From the error listener of a prompt
+    console.error(err)
+  })
