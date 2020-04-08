@@ -49,12 +49,6 @@ class ConsolePrompt<T> extends Prompt<T> {
       newline: true
     }
   }
-  static getErrorFormat (error: Error): ConsoleFormat {
-    return {
-      text: `An error occurred: ${error.message}`,
-      newline: true
-    }
-  }
 
   createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
     const emitter: PromptCollector<T> = new EventEmitter()
@@ -79,11 +73,6 @@ class ConsolePrompt<T> extends Prompt<T> {
     emitter.once('inactivity', () => {
       this.sendMessage(ConsolePrompt.inactivityFormat, channel)
         .catch(err => emitter.emit('error', err))
-    })
-    // Optional
-    emitter.once('error', (error: Error) => {
-      this.sendMessage(ConsolePrompt.getErrorFormat(error), channel)
-        .catch(console.error)
     })
     // Optional
     emitter.once('exit', (message: ConsoleMessage) => {
