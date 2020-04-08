@@ -17,12 +17,11 @@ export class PromptRunner<T> {
    * @param prompt Root prompt
    */
   static valid<T> (prompt: Prompt<T>): boolean {
+    if (!prompt.hasValidChildren()) {
+      return false
+    }
     const children = prompt.children
-    const multipleChildren = children.length > 1
     for (const child of children) {
-      if (multipleChildren && !child.condition) {
-        return false
-      }
       if (!this.valid(child)) {
         return false
       }

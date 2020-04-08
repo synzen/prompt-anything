@@ -76,52 +76,38 @@ describe('Unit::PromptRunner', () => {
     })
   })
   describe('validate', () => {
-    it('throws returns true for <= 1 children with no conditions', () => {
-      const promptR = new MyPrompt(promptForm, promptFunc)
-      const promptR1 = new MyPrompt(promptForm, promptFunc)
-      const promptR11 = new MyPrompt(promptForm, promptFunc)
-      promptR.children = [promptR1]
-      promptR1.children = [promptR11]
-      promptR11.children = []
-      expect(PromptRunner.valid(promptR)).toEqual(true)
+    it('returns false if root prompt has no valid children', () => {
+      const prompt = new MyPrompt(promptForm, promptFunc)
+      jest.spyOn(prompt, 'hasValidChildren').mockReturnValue(false)
+      expect(PromptRunner.valid(prompt)).toEqual(false)
     })
-    it('returns false for > 1 children with some having no conditions', () => {
-      const promptR = new MyPrompt(promptForm, promptFunc)
-      const promptR1 = new MyPrompt(promptForm, promptFunc)
-      const promptR11 = new MyPrompt(promptForm, promptFunc)
-      const promptR12 = new MyPrompt(promptForm, promptFunc)
-      promptR.children = [promptR1]
-      promptR1.children = [promptR11, promptR12]
-      promptR11.children = []
-      promptR12.children = []
-      expect(PromptRunner.valid(promptR)).toEqual(false)
+    it('returns false if one of the root node children is false', () => {
+      const prompt1 = new MyPrompt(promptForm, promptFunc)
+      const prompt2 = new MyPrompt(promptForm, promptFunc)
+      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      prompt1.children = [prompt2, prompt3]
+      prompt2.children = []
+      prompt3.children = []
+      jest.spyOn(prompt1, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(prompt2, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(prompt3, 'hasValidChildren').mockReturnValue(false)
+      expect(PromptRunner.valid(prompt1)).toEqual(false)
     })
-    it('returns true for > 1 children all having conditions', () => {
-      const promptR = new MyPrompt(promptForm, promptFunc)
-      const promptR1 = new MyPrompt(promptForm, promptFunc)
-      const promptR11 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR11, 'condition', {
-        value: () => false
-      })
-      const promptR12 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR12, 'condition', {
-        value: () => true
-      })
-      const promptR121 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR121, 'condition', {
-        value: () => true
-      })
-      const promptR122 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR122, 'condition', {
-        value: () => true
-      })
-      promptR.children = [promptR1]
-      promptR1.children = [promptR11, promptR12]
-      promptR11.children = []
-      promptR12.children = [promptR121, promptR122]
-      promptR121.children = []
-      promptR122.children = []
-      expect(PromptRunner.valid(promptR)).toEqual(true)
+    it('returns false if one of the nested node children is false', () => {
+      const prompt1 = new MyPrompt(promptForm, promptFunc)
+      const prompt2 = new MyPrompt(promptForm, promptFunc)
+      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt4 = new MyPrompt(promptForm, promptFunc)
+      const prompt5 = new MyPrompt(promptForm, promptFunc)
+      prompt1.children = [prompt2]
+      prompt2.children = [prompt3]
+      prompt3.children = [prompt4, prompt5]
+      jest.spyOn(prompt1, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(prompt2, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(prompt3, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(prompt4, 'hasValidChildren').mockReturnValue(false)
+      jest.spyOn(prompt5, 'hasValidChildren').mockReturnValue(true)
+      expect(PromptRunner.valid(prompt1)).toEqual(false)
     })
   })
   describe('execute', () => {

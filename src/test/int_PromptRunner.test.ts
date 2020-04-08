@@ -49,6 +49,55 @@ describe('Int::PromptRunner', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
+  describe('validate', () => {
+    it('returns true for <= 1 children with no conditions', () => {
+      const promptR = new MyPrompt(promptForm, promptFunc)
+      const promptR1 = new MyPrompt(promptForm, promptFunc)
+      const promptR11 = new MyPrompt(promptForm, promptFunc)
+      promptR.children = [promptR1]
+      promptR1.children = [promptR11]
+      promptR11.children = []
+      expect(PromptRunner.valid(promptR)).toEqual(true)
+    })
+    it('returns false for > 1 children with some having no conditions', () => {
+      const promptR = new MyPrompt(promptForm, promptFunc)
+      const promptR1 = new MyPrompt(promptForm, promptFunc)
+      const promptR11 = new MyPrompt(promptForm, promptFunc)
+      const promptR12 = new MyPrompt(promptForm, promptFunc)
+      promptR.children = [promptR1]
+      promptR1.children = [promptR11, promptR12]
+      promptR11.children = []
+      promptR12.children = []
+      expect(PromptRunner.valid(promptR)).toEqual(false)
+    })
+    it('returns true for > 1 children all having conditions', () => {
+      const promptR = new MyPrompt(promptForm, promptFunc)
+      const promptR1 = new MyPrompt(promptForm, promptFunc)
+      const promptR11 = new MyPrompt(promptForm, promptFunc)
+      Object.defineProperty(promptR11, 'condition', {
+        value: () => false
+      })
+      const promptR12 = new MyPrompt(promptForm, promptFunc)
+      Object.defineProperty(promptR12, 'condition', {
+        value: () => true
+      })
+      const promptR121 = new MyPrompt(promptForm, promptFunc)
+      Object.defineProperty(promptR121, 'condition', {
+        value: () => true
+      })
+      const promptR122 = new MyPrompt(promptForm, promptFunc)
+      Object.defineProperty(promptR122, 'condition', {
+        value: () => true
+      })
+      promptR.children = [promptR1]
+      promptR1.children = [promptR11, promptR12]
+      promptR11.children = []
+      promptR12.children = [promptR121, promptR122]
+      promptR121.children = []
+      promptR122.children = []
+      expect(PromptRunner.valid(promptR)).toEqual(true)
+    })
+  })
   describe('execute', () => {
     it('runs the right prompts (ignoring collect)', async () => {
       const channel = createMockChannel()

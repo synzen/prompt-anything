@@ -48,6 +48,25 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   }
 
   /**
+   * Asserts that the children of this prompt are valid.
+   * If a phase has 2 or more children, then they must all
+   * all have condition functions specified.
+   */
+  hasValidChildren (): boolean {
+    const children = this.children
+    if (children.length <= 1) {
+      return true
+    }
+    // There are more 2 or more children - they must have conditions
+    for (const child of children) {
+      if (!child.condition) {
+        return false
+      }
+    }
+    return true
+  }
+
+  /**
    * Handles timeout and messages of a message colllector
    * 
    * @param emitter Message collector
