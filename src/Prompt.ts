@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 
 export type PromptFunction<T> = (this: Prompt<T>, m: MessageInterface, data: T) => Promise<T>
 
-export interface PromptCollectorInterface<T> extends EventEmitter {
+export interface PromptCollector<T> extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
   emit(event: 'accept', message: MessageInterface, data: T): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
@@ -32,7 +32,7 @@ export type StoredMessage = {
 }
 
 export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
-  abstract createCollector(channel: ChannelInterface, data: T): PromptCollectorInterface<T>;
+  abstract createCollector(channel: ChannelInterface, data: T): PromptCollector<T>;
   formatGenerator: FormatGenerator<T>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
@@ -60,7 +60,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param data Prompt data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<T> (emitter: PromptCollectorInterface<T>, func: PromptFunction<T>, data?: T, duration?: number): void {
+  static handleCollector<T> (emitter: PromptCollector<T>, func: PromptFunction<T>, data?: T, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -87,7 +87,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<T> (emitter: PromptCollectorInterface<T>, message: MessageInterface, func: PromptFunction<T>, data?: T): Promise<boolean> {
+  static async handleMessage<T> (emitter: PromptCollector<T>, message: MessageInterface, func: PromptFunction<T>, data?: T): Promise<boolean> {
     if (message.content === 'exit') {
       emitter.emit('exit', message)
       return true
@@ -206,7 +206,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
         resolve(data)
         return
       }
-      const collector: PromptCollectorInterface<T> = this.createCollector(channel, data)
+      const collector: PromptCollector<T> = this.createCollector(channel, data)
       Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
 
       const terminate = async (terminateString: string): Promise<void> => {
