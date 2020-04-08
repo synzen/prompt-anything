@@ -111,7 +111,7 @@ describe('Unit::Prompt', () => {
         throw error
       }
       const stopCollecting = await Prompt.handleMessage(emitter, message, thisPromptFunc)
-      expect(emit).toHaveBeenCalledWith('error', message, error)
+      expect(emit).toHaveBeenCalledWith('error', error)
       expect(stopCollecting).toEqual(true)
     })
   })
@@ -122,7 +122,6 @@ describe('Unit::Prompt', () => {
     })
     it('calls handleMessage for every message', async () => {
       const emitter = new EventEmitter()
-      const originalMessage = createMockMessage('', authorID)
       const message = createMockMessage('', authorID)
       const message2 = createMockMessage('', authorID)
       const data = {
@@ -368,14 +367,13 @@ describe('Unit::Prompt', () => {
       })
     })
     describe('collector error', () => {
-      it('rejects prompt run', async () => {
+      it('rejects prompt run and terminates', async () => {
         const error = new Error('qateswgry')
-        const spy = jest.spyOn(prompt, 'storeUserMessage')
+        const terminateHere = jest.spyOn(prompt, 'terminateHere')
         const promptRun = prompt.collect(channel, {})
-        const lastUserInput = createMockMessage()
-        emitter.emit('error', lastUserInput, error)
+        emitter.emit('error', error)
         await expect(promptRun).rejects.toThrow(error)
-        expect(spy).toHaveBeenCalledWith(lastUserInput)
+        expect(terminateHere).toHaveBeenCalledTimes(1)
       })
     })
     describe('collector reject', () => {

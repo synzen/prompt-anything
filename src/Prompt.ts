@@ -10,7 +10,7 @@ export interface PromptCollector<T> extends EventEmitter {
   emit(event: 'accept', message: MessageInterface, data: T): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
   emit(event: 'inactivity'): boolean;
-  emit(event: 'error', message: MessageInterface, error: Error): boolean;
+  emit(event: 'error', error: Error): boolean;
   emit(event: 'message', message: MessageInterface): boolean;
   emit(event: 'stop'): boolean;
   on(event: 'message', listener: (message: MessageInterface) => void): this;
@@ -18,7 +18,7 @@ export interface PromptCollector<T> extends EventEmitter {
   once(event: 'accept', listener: (message: MessageInterface, data: T) => void): this;
   once(event: 'exit', listener: (message: MessageInterface) => void): this;
   once(event: 'inactivity', listener: () => void): this;
-  once(event: 'error', listener: (message: MessageInterface, error: Error) => void): this;
+  once(event: 'error', listener: (error: Error) => void): this;
   once(event: 'stop', listener: () => void): this;
 }
 
@@ -99,7 +99,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
         emitter.emit('reject', message, err)
         return false
       } else {
-        emitter.emit('error', message, err)
+        emitter.emit('error', err)
         return true
       }
     }
@@ -201,8 +201,8 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
       const collector: PromptCollector<T> = this.createCollector(channel, data)
       Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
 
-      collector.once('error', (lastUserInput: MessageInterface, err: Error) => {
-        this.storeUserMessage(lastUserInput)
+      collector.once('error', (err: Error) => {
+        this.terminateHere()
         reject(err)
       })
       collector.once('inactivity', (): void => {

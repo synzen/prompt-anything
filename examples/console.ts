@@ -62,7 +62,7 @@ class ConsolePrompt<T> extends Prompt<T> {
       input: process.stdin,
       output: process.stdout
     })
-    readline.on('line', (line) => {
+    readline.on('line', (line: string) => {
       // REQUIRED
       emitter.emit('message', new ConsoleMessage(line))
     })
@@ -71,7 +71,7 @@ class ConsolePrompt<T> extends Prompt<T> {
       readline.close()
     })
     // Optional
-    emitter.on('reject', (message, error) => {
+    emitter.on('reject', (message: ConsoleMessage, error: Rejection) => {
       this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
     })
     // Optional
@@ -79,11 +79,11 @@ class ConsolePrompt<T> extends Prompt<T> {
       this.sendMessage(ConsolePrompt.inactivityFormat, channel)
     })
     // Optional
-    emitter.once('error', (message, error) => {
+    emitter.once('error', (error: Error) => {
       this.sendMessage(ConsolePrompt.getErrorFormat(error), channel)
     })
     // Optional
-    emitter.once('exit', (message) => {
+    emitter.once('exit', (message: ConsoleMessage) => {
       this.sendMessage(ConsolePrompt.exitFormat, channel)
     })
     return emitter
