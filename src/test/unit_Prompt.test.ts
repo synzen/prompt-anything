@@ -66,14 +66,6 @@ describe('Unit::Prompt', () => {
   })
   describe('static handleMessage', () => {
     const authorID = '3w4ey5ru7t'
-    it('emits exit if message is exit', async () => {
-      const message = createMockMessage('exit', authorID)
-      const emitter = new EventEmitter()
-      const emit = jest.spyOn(emitter, 'emit')
-      const stopCollecting = await Prompt.handleMessage(emitter, message, promptFunc)
-      expect(emit).toHaveBeenCalledWith('exit', message)
-      expect(stopCollecting).toEqual(true)
-    })
     it('emits accept if no error is thrown in func', async () => {
       const message = createMockMessage('rfdeh', authorID)
       const emitter = new EventEmitter()
@@ -82,9 +74,8 @@ describe('Unit::Prompt', () => {
         fo: 'bar'
       }
       const thisPromptFunc = async (): Promise<{}> => funcData
-      const stopCollecting = await Prompt.handleMessage(emitter, message, thisPromptFunc)
+      await Prompt.handleMessage(emitter, message, thisPromptFunc)
       expect(emit).toHaveBeenCalledWith('accept', message, funcData)
-      expect(stopCollecting).toEqual(true)
     })
     it('emits reject if func error is a Rejection', async () => {
       const message = createMockMessage('rfdeh', authorID)
@@ -94,9 +85,8 @@ describe('Unit::Prompt', () => {
       const thisPromptFunc = async (): Promise<{}> => {
         throw rejectError
       }
-      const stopCollecting = await Prompt.handleMessage(emitter, message, thisPromptFunc)
+      await Prompt.handleMessage(emitter, message, thisPromptFunc)
       expect(emit).toHaveBeenCalledWith('reject', message, rejectError)
-      expect(stopCollecting).toEqual(false)
     })
     it('emits error if func error is not Rejection', async () => {
       const message = createMockMessage('rfdeh', authorID)
@@ -110,9 +100,8 @@ describe('Unit::Prompt', () => {
       const thisPromptFunc = async (): Promise<{}> => {
         throw error
       }
-      const stopCollecting = await Prompt.handleMessage(emitter, message, thisPromptFunc)
+      await Prompt.handleMessage(emitter, message, thisPromptFunc)
       expect(emit).toHaveBeenCalledWith('error', error)
-      expect(stopCollecting).toEqual(true)
     })
   })
   describe('handleCollector', () => {
@@ -127,7 +116,8 @@ describe('Unit::Prompt', () => {
       const data = {
         foo: 'bar'
       }
-      const handleMessage = jest.spyOn(Prompt, 'handleMessage').mockResolvedValue(false)
+      const handleMessage = jest.spyOn(Prompt, 'handleMessage')
+        .mockResolvedValue()
       Prompt.handleCollector(emitter, promptFunc, data)
       emitter.emit('message', message)
       emitter.emit('message', message2)
@@ -135,15 +125,12 @@ describe('Unit::Prompt', () => {
       expect(handleMessage).toHaveBeenCalledWith(emitter, message, promptFunc, data)
       expect(handleMessage).toHaveBeenCalledWith(emitter, message2, promptFunc, data)
     })
-    it('emits stop if handleMessage returns true to stop collection', async () => {
+    it('clears timeout on emitter stop', async () => {
       const emitter = new EventEmitter()
       const message = createMockMessage()
-      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue(true)
-      const emit = jest.spyOn(emitter, 'emit')
       Prompt.handleCollector(emitter, promptFunc)
-      emitter.emit('message', message)
+      emitter.emit('stop', message)
       await flushPromises()
-      expect(emit).toHaveBeenCalledWith('stop')
       expect(clearTimeout).toHaveBeenCalled()
     })
     it('calls settimeout if duration is specified', () => {
@@ -152,7 +139,7 @@ describe('Unit::Prompt', () => {
         foo: 'bar'
       }
       const duration = 9423
-      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue(false)
+      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue()
       Prompt.handleCollector(emitter, promptFunc, data, duration)
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), duration)
     })
@@ -162,21 +149,19 @@ describe('Unit::Prompt', () => {
         foo: 'bar'
       }
       const duration = undefined
-      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue(false)
+      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue()
       Prompt.handleCollector(emitter, promptFunc, data, duration)
       expect(setTimeout).not.toHaveBeenCalled()
     })
-    it('emits stop and inactivity if timeout runs', () => {
+    it('emits inactivity if timeout runs', () => {
       const emitter = new EventEmitter()
       const data = {
         foo: 'bar'
       }
       const duration = 9423
       const emit = jest.spyOn(emitter, 'emit')
-      jest.spyOn(Prompt, 'handleMessage').mockResolvedValue(false)
       Prompt.handleCollector(emitter, promptFunc, data, duration)
       jest.runOnlyPendingTimers()
-      expect(emit).toHaveBeenCalledWith('stop')
       expect(emit).toHaveBeenCalledWith('inactivity')
     })
   })

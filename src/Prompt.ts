@@ -59,16 +59,14 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
-        emitter.emit('stop')
         emitter.emit('inactivity')
       }, duration)
     }
     emitter.on('message', async thisMessage => {
-      const stopCollecting = await this.handleMessage(emitter, thisMessage, func, data)
-      if (stopCollecting) {
-        emitter.emit('stop')
-        clearTimeout(timer)
-      }
+      await this.handleMessage(emitter, thisMessage, func, data)
+    })
+    emitter.once('stop', () => {
+      clearTimeout(timer)
     })
   }
 
@@ -82,25 +80,18 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<T> (emitter: PromptCollector<T>, message: MessageInterface, func: PromptFunction<T>, data?: T): Promise<boolean> {
-    if (message.content === 'exit') {
-      emitter.emit('exit', message)
-      return true
-    }
+  static async handleMessage<T> (emitter: PromptCollector<T>, message: MessageInterface, func: PromptFunction<T>, data?: T): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
       const newData = await func(message, data)
       emitter.emit('accept', message, newData)
-      return true
     } catch (err) {
       if (err instanceof Rejection) {
         // Don't stop collector since rejects can be tried again
         emitter.emit('reject', message, err)
-        return false
       } else {
         emitter.emit('error', err)
-        return true
       }
     }
   }
@@ -200,21 +191,25 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
       }
       const collector: PromptCollector<T> = this.createCollector(channel, data)
       Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
-
-      collector.once('error', (err: Error) => {
+      const stopHere = (): void => {
+        collector.emit('stop')
         this.terminateHere()
+      }
+      collector.once('error', (err: Error) => {
+        stopHere()
         reject(err)
       })
       collector.once('inactivity', (): void => {
-        this.terminateHere()
+        stopHere()
         resolve(data)
       })
       collector.once('exit', (exitMessage: MessageInterface) => {
+        stopHere()
         this.storeUserMessage(exitMessage)
-        this.terminateHere()
         resolve(data)
       })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
+        collector.emit('stop')
         this.storeUserMessage(acceptMessage)
         resolve(acceptData)
       })
