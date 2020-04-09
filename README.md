@@ -83,8 +83,10 @@ it('runs correctly for age <= 20', () => {
 
   // Ask name Prompt that collects messages
   const askNameFn: PromptFunction<AgeData> = async function (m, data) {
-    data.name = m.content
-    return data
+    return {
+      ...data,
+      name: m.content
+    }
   }
   const askName = new ConsolePrompt(() => ({
     text: `What's your name?`
@@ -95,8 +97,10 @@ it('runs correctly for age <= 20', () => {
     if (isNaN(Number(m.content))) {
       throw new Errors.Rejection()
     }
-    data.age = Number(m.content)
-    return data
+    return {
+      ...data,
+      age: Number(m.content)
+    }
   }
   const askAge = new MyPrompt((data) => ({
     text: `How old are you, ${data.name}?`
