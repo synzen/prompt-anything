@@ -103,10 +103,10 @@ const askNameFn: PromptFunction<AgePromptData> = async function (m, data) {
     name: m.content
   }
 }
-const askName = new ConsolePrompt((): ConsoleFormat => ({
+const askName = new ConsolePrompt({
   text: `What's your name?`,
   newline: false
-}), askNameFn)
+} as ConsoleFormat, askNameFn)
 
 // Ask age Prompt that collects messages
 const askAgeFn: PromptFunction<AgePromptData> = async function (m, data) {
