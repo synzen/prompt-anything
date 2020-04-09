@@ -50,6 +50,18 @@ class ConsolePrompt<T> extends Prompt<T> {
     }
   }
 
+  // Implement abstract methods. These events are automatically called
+  // and should NOT be called manually. These evnts should be emitted
+  async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface): Promise<void> {
+    await this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
+  }
+  async onInactivity(channel: ChannelInterface): Promise<void> {
+    await this.sendMessage(ConsolePrompt.inactivityFormat, channel)
+  }
+  async onExit(message: MessageInterface, channel: ChannelInterface): Promise<void> {
+    await this.sendMessage(ConsolePrompt.exitFormat, channel)
+  }
+
   createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
     const emitter: PromptCollector<T> = new EventEmitter()
     const readline = createInterface({
@@ -71,26 +83,7 @@ class ConsolePrompt<T> extends Prompt<T> {
     emitter.once('stop', () => {
       readline.close()
     })
-    this.optionalHandlers(emitter, channel)
     return emitter
-  }
-
-  optionalHandlers (emitter: PromptCollector<T>, channel: ChannelInterface): void {
-    // Optional
-    emitter.on('reject', (message: ConsoleMessage, error: Rejection) => {
-      this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
-        .catch(err => emitter.emit('error', err))
-    })
-    // Optional
-    emitter.once('inactivity', () => {
-      this.sendMessage(ConsolePrompt.inactivityFormat, channel)
-        .catch(err => emitter.emit('error', err))
-    })
-    // Optional
-    emitter.once('exit', (message: ConsoleMessage) => {
-      this.sendMessage(ConsolePrompt.exitFormat, channel)
-        .catch(err => emitter.emit('error', err))
-    })
   }
 }
 

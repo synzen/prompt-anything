@@ -32,8 +32,42 @@ export type StoredMessage = {
 }
 
 export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
+  /**
+   * Create a collector that is part of a prompt
+   * 
+   * @param channel Channel to create the collector in
+   * @param data Prompt data
+   */
   abstract createCollector(channel: ChannelInterface, data: T): PromptCollector<T>;
+
+  /**
+   * When a message is rejected, this function is additionally called
+   * 
+   * @param message Message that was rejected
+   * @param error The Rejection error the message caused
+   * @param channel The channel of the current prompt
+   * @param data The data of the current prompt
+   */
+  abstract onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface, data: T): Promise<void>;
+
+  /**
+   * When the collector expires, call this function
+   * @param channel The channel of the current prompt
+   * @param data The data of the current prompt
+   */
+  abstract onInactivity(channel: ChannelInterface, data: T): Promise<void>;
+
+  /**
+   * When a message specifies it wants to exit the prompt,
+   * call this function
+   * 
+   * @param message The message that triggered the exit
+   * @param channel The channel of the current prompt
+   * @param data The data of the current prompt
+   */
+  abstract onExit(message: MessageInterface, channel: ChannelInterface, data: T): Promise<void>;
   formatGenerator: FormatGenerator<T>
+  collector?: PromptCollector<T>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<T>
@@ -150,9 +184,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    */
   terminateHere (): void {
     this.setChildren([])
-    // return this.sendMessage({
-    //   text: terminateString
-    // }, channel)
   }
 
   /**
@@ -208,32 +239,42 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
         resolve(data)
         return
       }
-      const collector: PromptCollector<T> = this.createCollector(channel, data)
+      this.collector = this.createCollector(channel, data)
+      const collector = this.collector
       Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
-      const stopHere = (): void => {
+
+      const handleInternalError = (error: Error): boolean => collector.emit('error', error)
+      // Internally handled events
+      collector.once('error', (err: Error) => {
         collector.emit('stop')
         this.terminateHere()
-      }
-      collector.once('error', (err: Error) => {
-        stopHere()
         reject(err)
       })
+      collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
+        this.storeUserMessage(acceptMessage)
+        collector.emit('stop')
+        resolve(acceptData)
+      })
+      // User-overridden events
       collector.once('inactivity', (): void => {
-        stopHere()
-        resolve(data)
+        collector.emit('stop')
+        this.terminateHere()
+        this.onInactivity(channel, data)
+          .then(() => resolve(data))
+          .catch(handleInternalError)
       })
       collector.once('exit', (exitMessage: MessageInterface) => {
-        stopHere()
         this.storeUserMessage(exitMessage)
-        resolve(data)
-      })
-      collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
         collector.emit('stop')
-        this.storeUserMessage(acceptMessage)
-        resolve(acceptData)
+        this.terminateHere()
+        this.onExit(exitMessage, channel, data)
+          .then(() => resolve(data))
+          .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         this.storeUserMessage(userInput)
+        this.onReject(userInput, err, channel, data)
+          .catch(handleInternalError)
       })
     })
   }

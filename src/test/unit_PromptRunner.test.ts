@@ -1,10 +1,21 @@
 import { Prompt, FormatGenerator, PromptFunction } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
+import { MessageInterface } from "../types/generics"
+import { Rejection } from "../errors/Rejection"
 
 jest.mock('../Prompt')
 
 class MyPrompt extends Prompt<{}> {
+  onReject(message: MessageInterface, error: Rejection): Promise<void> {
+    throw new Error("Method not implemented.")
+  }
+  onInactivity(): Promise<void> {
+    throw new Error("Method not implemented.")
+  }
+  onExit(message: MessageInterface): Promise<void> {
+    throw new Error("Method not implemented.")
+  }
   createCollector (): EventEmitter {
     return new EventEmitter()
   }
