@@ -1,7 +1,7 @@
 import { Prompt } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
-import { MessageInterface } from "../types/generics";
+import { MessageInterface, FormatInterface } from "../types/generics";
 
 class MyPrompt<T> extends Prompt<T> {
   onReject(message: MessageInterface, error: Rejection): Promise<void> {
@@ -176,30 +176,55 @@ describe('Unit::Prompt', () => {
     })
   })
   describe('sendUserFormatMessage', () => {
-    it('calls sendMessage with the right args', async () => {
-      const channel = createMockChannel()
-      const generatedMessage = createMockMessage()
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const generatedFormat = {
-        text: 'aqedstgwry'
-      }
-      jest.spyOn(prompt, 'formatGenerator')
-        .mockReturnValue(generatedFormat)
-      const sendMessage = jest.spyOn(prompt, 'sendMessage')
-        .mockResolvedValue(generatedMessage)
-      await prompt.sendUserFormatMessage(channel, {})
-      expect(sendMessage).toHaveBeenCalledWith(generatedFormat, channel)
+    describe('non-function formatGenerator', () => {
+      it('calls sendMessage with the right args', async () => {
+        const channel = createMockChannel()
+        const generatedMessage = createMockMessage()
+        const prompt = new MyPrompt(promptVis, promptFunc)
+        const generatedFormat = {
+          text: 'aqedstgwry'
+        }
+        prompt.formatGenerator = generatedFormat
+        const sendMessage = jest.spyOn(prompt, 'sendMessage')
+          .mockResolvedValue(generatedMessage)
+        await prompt.sendUserFormatMessage(channel, {})
+        expect(sendMessage).toHaveBeenCalledWith(generatedFormat, channel)
+      })
+      it('returns what sendMessage returns', async () => {
+        const channel = createMockChannel()
+        const generatedMessage = createMockMessage()
+        const prompt = new MyPrompt(promptVis, promptFunc)
+        prompt.formatGenerator = {text: 'aedf'}
+        jest.spyOn(prompt, 'sendMessage')
+          .mockResolvedValue(generatedMessage)
+        const returned = await prompt.sendUserFormatMessage(channel, {})
+        expect(returned).toEqual(generatedMessage)
+      })
     })
-    it('returns what sendMessage returns', async () => {
-      const channel = createMockChannel()
-      const generatedMessage = createMockMessage()
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      jest.spyOn(prompt, 'formatGenerator')
-        .mockReturnValue({ text: 'aedf' })
-      jest.spyOn(prompt, 'sendMessage')
-        .mockResolvedValue(generatedMessage)
-      const returned = await prompt.sendUserFormatMessage(channel, {})
-      expect(returned).toEqual(generatedMessage)
+    describe('function formatGenerator', () => {
+      it('sends the generated format', async () => {
+        const channel = createMockChannel()
+        const generatedMessage = createMockMessage()
+        const prompt = new MyPrompt(promptVis, promptFunc)
+        const generatedFormat = {
+          text: 'aqedstgwry'
+        }
+        prompt.formatGenerator = (): FormatInterface => generatedFormat
+        const sendMessage = jest.spyOn(prompt, 'sendMessage')
+          .mockResolvedValue(generatedMessage)
+        await prompt.sendUserFormatMessage(channel, {})
+        expect(sendMessage).toHaveBeenCalledWith(generatedFormat, channel)
+      })
+      it('returns what sendMessage returns', async () => {
+        const channel = createMockChannel()
+        const generatedMessage = createMockMessage()
+        const prompt = new MyPrompt(promptVis, promptFunc)
+        prompt.formatGenerator = (): FormatInterface => ({text: 'aedf'})
+        jest.spyOn(prompt, 'sendMessage')
+          .mockResolvedValue(generatedMessage)
+        const returned = await prompt.sendUserFormatMessage(channel, {})
+        expect(returned).toEqual(generatedMessage)
+      })
     })
   })
   describe('sendMessage', () => {

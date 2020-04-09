@@ -66,14 +66,14 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param data The data of the current prompt
    */
   abstract onExit(message: MessageInterface, channel: ChannelInterface, data: T): Promise<void>;
-  formatGenerator: FormatGenerator<T>
+  formatGenerator: FormatGenerator<T>|FormatInterface
   collector?: PromptCollector<T>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<T>
   readonly condition?: PromptCondition<T>
 
-  constructor(formatGenerator: FormatGenerator<T>, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 0) {
+  constructor(formatGenerator: FormatGenerator<T>|FormatInterface, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 0) {
     super()
     this.formatGenerator = formatGenerator
     this.duration = duration
@@ -175,8 +175,12 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param data Data to generate the user's message
    */
   async sendUserFormatMessage (channel: ChannelInterface, data: T): Promise<MessageInterface> {
-    const format = this.formatGenerator(data)
-    return this.sendMessage(format, channel)
+    if (typeof this.formatGenerator === 'function') {
+      const format = this.formatGenerator(data)
+      return this.sendMessage(format, channel)
+    } else {
+      return this.sendMessage(this.formatGenerator, channel)
+    }
   }
 
   /**
