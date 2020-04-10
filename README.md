@@ -3,7 +3,7 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/4be50d131276538502d1/maintainability)](https://codeclimate.com/github/synzen/discord-menus/maintainability)
 <a href="https://codeclimate.com/github/synzen/discord-menus/test_coverage"><img src="https://api.codeclimate.com/v1/badges/4be50d131276538502d1/test_coverage" /></a>
 
-A modular, testable framework to build prompts of any kind (including console prompts).
+A modular, testable framework to build prompts of any kind (such as ones within the console).
 
 ## Implementation
 
@@ -56,6 +56,8 @@ See the `examples/console.ts` for a functioning implementation that accepts inpu
 ## Testing
 
 Unit testing is straightforward since the tree of responses is built up from individual, isolated prompts represented by functions that can be exported for testing.
+
+If the data is an object, pure functions should be used for prompt functions since each prompt should ideally depend on the exact object given by the previous prompt (unmodified by the current one).
 
 Integration testing can be asserted on the execution order of the phases. A "flush promises" method must be used.
 ```ts
