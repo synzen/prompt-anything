@@ -1,4 +1,4 @@
-import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector, ChannelInterface, FormatInterface, Rejection } from '../src/index'
+import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector, ChannelInterface, VisualInterface, Rejection } from '../src/index'
 import { EventEmitter } from 'events'
 import { createInterface } from 'readline'
 
@@ -6,7 +6,7 @@ import { createInterface } from 'readline'
  * Implement relevant interfaces for console use
  */
 
-class ConsoleFormat implements FormatInterface {
+class ConsoleVisual implements VisualInterface {
   text: string
   newline?: boolean
 
@@ -24,26 +24,26 @@ class ConsoleMessage implements MessageInterface {
 }
 
 class ConsoleChannel implements ChannelInterface {
-  async send (format: ConsoleFormat): Promise<ConsoleMessage> {
-    if (!format.newline) {
-      process.stdout.write(format.text + ' ')
+  async send (visual: ConsoleVisual): Promise<ConsoleMessage> {
+    if (!visual.newline) {
+      process.stdout.write(visual.text + ' ')
     } else {
-      console.log(format.text)
+      console.log(visual.text)
     }
-    return new ConsoleMessage(format.text)
+    return new ConsoleMessage(visual.text)
   }
 }
 
 class ConsolePrompt<T> extends Prompt<T> {
-  static exitFormat: ConsoleFormat = {
+  static exitVisual: ConsoleVisual = {
     text: `No longer accepting input.`,
     newline: true
   }
-  static inactivityFormat: ConsoleFormat = {
+  static inactivityVisual: ConsoleVisual = {
     text: `You took too long.`,
     newline: true
   }
-  static getRejectFormat (error: Rejection): ConsoleFormat {
+  static getRejectVisual (error: Rejection): ConsoleVisual {
     return {
       text: `That's invalid input! (${error.message})`,
       newline: true
@@ -53,13 +53,13 @@ class ConsolePrompt<T> extends Prompt<T> {
   // Implement abstract methods. These events are automatically called
   // and should NOT be called manually. These evnts should be emitted
   async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.getRejectFormat(error), channel)
+    await this.sendMessage(ConsolePrompt.getRejectVisual(error), channel)
   }
   async onInactivity(channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.inactivityFormat, channel)
+    await this.sendMessage(ConsolePrompt.inactivityVisual, channel)
   }
   async onExit(message: MessageInterface, channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.exitFormat, channel)
+    await this.sendMessage(ConsolePrompt.exitVisual, channel)
   }
 
   createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
@@ -106,7 +106,7 @@ const askNameFn: PromptFunction<AgePromptData> = async function (m, data) {
 const askName = new ConsolePrompt({
   text: `What's your name?`,
   newline: false
-} as ConsoleFormat, askNameFn)
+} as ConsoleVisual, askNameFn)
 
 // Ask age Prompt that collects messages
 const askAgeFn: PromptFunction<AgePromptData> = async function (m, data) {
@@ -118,7 +118,7 @@ const askAgeFn: PromptFunction<AgePromptData> = async function (m, data) {
     age: Number(m.content)
   }
 }
-const askAge = new ConsolePrompt((data): ConsoleFormat => ({
+const askAge = new ConsolePrompt((data): ConsoleVisual => ({
   text: `How old are you, ${data.name}?`,
   newline: true
 }), askAgeFn)
