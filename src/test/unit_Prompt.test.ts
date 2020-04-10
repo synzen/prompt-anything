@@ -91,6 +91,41 @@ describe('Unit::Prompt', () => {
       expect(prompt.getFormat({})).toEqual(format)
     })
   })
+  describe('hasValidChildren', () => {
+    it('returns true for prompt with 0 or 1 child', () => {
+      const prompt = new MyPrompt(promptVis)
+      prompt.children = []
+      expect(prompt.hasValidChildren()).toEqual(true)
+      prompt.children = [new MyPrompt(promptVis)]
+      expect(prompt.hasValidChildren()).toEqual(true)
+    })
+    it('returns false for 2+ children with no condition', () => {
+      const prompt = new MyPrompt(promptVis)
+      const child1 = new MyPrompt(promptVis)
+      Object.defineProperty(child1, 'condition', {
+        value: undefined
+      })
+      const child2 = new MyPrompt(promptVis)
+      Object.defineProperty(child2, 'condition', {
+        value: undefined
+      })
+      prompt.children = [child1, child2]
+      expect(prompt.hasValidChildren()).toEqual(false)
+    })
+    it('returns true for 2+ children with conditions', () => {
+      const prompt = new MyPrompt(promptVis)
+      const child1 = new MyPrompt(promptVis)
+      Object.defineProperty(child1, 'condition', {
+        value: jest.fn()
+      })
+      const child2 = new MyPrompt(promptVis)
+      Object.defineProperty(child2, 'condition', {
+        value: jest.fn()
+      })
+      prompt.children = [child1, child2]
+      expect(prompt.hasValidChildren()).toEqual(true)
+    })
+  })
   describe('static handleMessage', () => {
     const authorID = '3w4ey5ru7t'
     it('emits accept if no error is thrown in func', async () => {
