@@ -77,7 +77,7 @@ export class PromptRunner<T> {
     let thisPrompt: Prompt<T>|null = initialPrompt
     let thisData = this.initialData
     await thisPrompt.sendUserFormatMessage(channel, thisData)
-    while (thisPrompt && thisPrompt.shouldRunCollector()) {
+    while (thisPrompt) {
       const promptData: T = await thisPrompt.collect(channel, thisData)
       thisPrompt = await thisPrompt.getNext(promptData)
       thisData = promptData

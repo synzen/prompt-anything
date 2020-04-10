@@ -157,7 +157,6 @@ describe('Unit::PromptRunner', () => {
         { a: 2, b: 2 }
       ]
       const sendUserFormatMessageSpies = prompts.map((p, index) => {
-        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         jest.spyOn(p, 'collect').mockResolvedValue(promptsCollectedData[index])
         return jest.spyOn(p, 'sendUserFormatMessage')
       })
@@ -193,7 +192,6 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(null)
       const prompts = [prompt1, prompt2, prompt3]
       const collectSpies = prompts.map(p => {
-        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         return jest.spyOn(p, 'collect').mockResolvedValue({
           data: {},
           message: createMockMessage()
@@ -204,15 +202,6 @@ describe('Unit::PromptRunner', () => {
       for (const spy of collectSpies) {
         expect(spy).toHaveBeenCalledTimes(1)
       }
-    })
-    it('does not call prompt collect for prompt with no children', async () => {
-      const channel = createMockChannel()
-      const prompt = new MyPrompt(promptForm, promptFunc)
-      prompt.children = []
-      const spy = jest.spyOn(prompt, 'collect')
-      const runner = new PromptRunner<{}>({})
-      await runner.execute(prompt, channel)
-      expect(spy).not.toHaveBeenCalled()
     })
     it('adds each ran prompt into this.ran', async () => {
       const channel = createMockChannel()
@@ -227,7 +216,6 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(null)
       const prompts = [prompt1, prompt2, prompt3]
       prompts.forEach(p => {
-        jest.spyOn(p, 'shouldRunCollector').mockReturnValue(true)
         return jest.spyOn(p, 'collect').mockResolvedValue({
           data: {},
           message: createMockMessage()
