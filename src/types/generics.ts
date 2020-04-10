@@ -1,9 +1,9 @@
-export interface FormatInterface {
+export interface VisualInterface {
   text: string;
 }
 
 export interface ChannelInterface {
-  send: (format: FormatInterface) => Promise<MessageInterface>;
+  send: (format: VisualInterface) => Promise<MessageInterface>;
 }
 
 export interface MessageInterface {

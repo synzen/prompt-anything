@@ -1,4 +1,4 @@
-import { Prompt, FormatGenerator, PromptFunction, PromptCondition } from "../Prompt"
+import { Prompt, VisualGenerator, PromptFunction, PromptCondition } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
@@ -26,7 +26,7 @@ const createMockMessage = (content = ''): MockMessage => ({
   content
 })
 
-const promptForm: FormatGenerator<{}> = () => ({
+const promptForm: VisualGenerator<{}> = () => ({
   text: '1',
   embed: {
     title: '1'
@@ -191,7 +191,7 @@ describe('Int::PromptRunner', () => {
         age?: number;
         name?: string;
       }
-      const thisPromptForm: FormatGenerator<PromptData> = () => ({
+      const thisPromptForm: VisualGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'
@@ -256,7 +256,7 @@ describe('Int::PromptRunner', () => {
         age?: number;
         name?: string;
       }
-      const thisPromptForm: FormatGenerator<PromptData> = () => ({
+      const thisPromptForm: VisualGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'
@@ -327,7 +327,7 @@ describe('Int::PromptRunner', () => {
         age?: number;
         name?: string;
       }
-      const thisPromptForm: FormatGenerator<PromptData> = () => ({
+      const thisPromptForm: VisualGenerator<PromptData> = () => ({
         text: '1',
         embed: {
           title: '1'

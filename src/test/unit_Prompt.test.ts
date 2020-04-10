@@ -1,7 +1,7 @@
 import { Prompt } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
-import { MessageInterface, FormatInterface } from "../types/generics";
+import { MessageInterface } from "../types/generics";
 
 class MyPrompt<T> extends Prompt<T> {
   onReject(message: MessageInterface, error: Rejection): Promise<void> {
@@ -63,32 +63,32 @@ describe('Unit::Prompt', () => {
   it('initializes correctly', () => {
     const duration = 234
     const prompt = new MyPrompt(promptVis, promptFunc, promptCond, duration)
-    expect(prompt.formatGenerator).toEqual(promptVis)
+    expect(prompt.visualGenerator).toEqual(promptVis)
     expect(prompt.function).toEqual(promptFunc)
     expect(prompt.condition).toEqual(promptCond)
     expect(prompt.duration).toEqual(duration)
   })
-  describe('getFormat', () => {
-    it('returns the function return value if format generator is func', () => {
+  describe('getVisual', () => {
+    it('returns the function return value if visual generator is func', () => {
       const prompt = new MyPrompt(promptVis)
-      const format = {
+      const visual = {
         text: 'qaedg'
       }
       const data = {
         jo: 'bo'
       }
-      prompt.formatGenerator = jest.fn(() => format)
-      expect(prompt.getFormat(data)).toEqual(format)
-      expect(prompt.formatGenerator)
+      prompt.visualGenerator = jest.fn(() => visual)
+      expect(prompt.getVisual(data)).toEqual(visual)
+      expect(prompt.visualGenerator)
         .toHaveBeenCalledWith(data)
     })
-    it('directly returns the value if format generator is not func', () => {
+    it('directly returns the value if visual generator is not func', () => {
       const prompt = new MyPrompt(promptVis)
-      const format = {
+      const visual = {
         text: 'qaedg'
       }
-      prompt.formatGenerator = format
-      expect(prompt.getFormat({})).toEqual(format)
+      prompt.visualGenerator = visual
+      expect(prompt.getVisual({})).toEqual(visual)
     })
   })
   describe('hasValidChildren', () => {
@@ -227,59 +227,59 @@ describe('Unit::Prompt', () => {
       expect(emit).toHaveBeenCalledWith('inactivity')
     })
   })
-  describe('sendUserFormatMessage', () => {
+  describe('sendUserVisualMessage', () => {
     it('returns the message', async () => {
       const channel = createMockChannel()
       const sentMessage = createMockMessage()
       const prompt = new MyPrompt(promptVis)
-      const format = {
+      const visual = {
         text: 'aqedstgwry'
       }
       const data = {
         foo: 1
       }
-      jest.spyOn(prompt, 'getFormat')
-        .mockReturnValue(format)
+      jest.spyOn(prompt, 'getVisual')
+        .mockReturnValue(visual)
       jest.spyOn(prompt, 'sendMessage')
         .mockResolvedValue(sentMessage)
-      const returned = await prompt.sendUserFormatMessage(channel, data)
+      const returned = await prompt.sendUserVisualMessage(channel, data)
       expect(returned).toEqual(sentMessage)
     })
     it('sends with the right args', async () => {
       const channel = createMockChannel()
       const sentMessage = createMockMessage()
       const prompt = new MyPrompt(promptVis)
-      const format = {
+      const visual = {
         text: 'aqedstgwry'
       }
       const data = {}
-      jest.spyOn(prompt, 'getFormat')
-        .mockReturnValue(format)
+      jest.spyOn(prompt, 'getVisual')
+        .mockReturnValue(visual)
       const spy = jest.spyOn(prompt, 'sendMessage')
         .mockResolvedValue(sentMessage)
-      await prompt.sendUserFormatMessage(channel, data)
-      expect(spy).toHaveBeenCalledWith(format, channel)
+      await prompt.sendUserVisualMessage(channel, data)
+      expect(spy).toHaveBeenCalledWith(visual, channel)
     })
   })
   describe('sendMessage', () => {
-    const format = {
+    const visual = {
       text: 'hwat'
     }
-    it('sends the generated format', async () => {
+    it('sends the generated visual', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.formatGenerator = (): { text: string } => format
+      prompt.visualGenerator = (): { text: string } => visual
       const channel = createMockChannel()
-      await prompt.sendMessage(format, channel)
+      await prompt.sendMessage(visual, channel)
       expect(channel.send)
-        .toHaveBeenCalledWith(format)
+        .toHaveBeenCalledWith(visual)
     })
     it('returns the message if it exists', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.formatGenerator = (): { text: string } => format
+      prompt.visualGenerator = (): { text: string } => visual
       const returnedMessage = createMockMessage()
       const channel = createMockChannel()
       channel.send.mockResolvedValue(returnedMessage)
-      const returned = await prompt.sendMessage(format, channel)
+      const returned = await prompt.sendMessage(visual, channel)
       expect(returned).toEqual(returnedMessage)
     })
   })

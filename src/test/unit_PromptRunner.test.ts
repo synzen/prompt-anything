@@ -1,4 +1,4 @@
-import { Prompt, FormatGenerator, PromptFunction } from "../Prompt"
+import { Prompt, VisualGenerator, PromptFunction } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { MessageInterface } from "../types/generics"
@@ -53,7 +53,7 @@ const createMockChannel = (): MockChannel => ({
 })
 
 describe('Unit::PromptRunner', () => {
-  const promptForm: FormatGenerator<{}> = () => ({
+  const promptVis: VisualGenerator<{}> = () => ({
     text: '1',
     embed: {
       title: '1'
@@ -68,7 +68,7 @@ describe('Unit::PromptRunner', () => {
       jest.spyOn(PromptRunner, 'valid')
         .mockReturnValue(false)
       const channel = createMockChannel()
-      const prompt = new MyPrompt(promptForm, promptFunc)
+      const prompt = new MyPrompt(promptVis, promptFunc)
       const runner = new PromptRunner<{}>({})
       await expect(runner.run(prompt, channel))
         .rejects
@@ -78,7 +78,7 @@ describe('Unit::PromptRunner', () => {
       jest.spyOn(PromptRunner, 'valid')
         .mockReturnValue(true)
       const channel = createMockChannel()
-      const prompt = new MyPrompt(promptForm, promptFunc)
+      const prompt = new MyPrompt(promptVis, promptFunc)
       const runner = new PromptRunner<{}>({})
       const spy = jest.spyOn(runner, 'execute')
         .mockResolvedValue()
@@ -88,14 +88,14 @@ describe('Unit::PromptRunner', () => {
   })
   describe('validate', () => {
     it('returns false if root prompt has no valid children', () => {
-      const prompt = new MyPrompt(promptForm, promptFunc)
+      const prompt = new MyPrompt(promptVis, promptFunc)
       jest.spyOn(prompt, 'hasValidChildren').mockReturnValue(false)
       expect(PromptRunner.valid(prompt)).toEqual(false)
     })
     it('returns false if one of the root node children is false', () => {
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       prompt1.children = [prompt2, prompt3]
       prompt2.children = []
       prompt3.children = []
@@ -105,11 +105,11 @@ describe('Unit::PromptRunner', () => {
       expect(PromptRunner.valid(prompt1)).toEqual(false)
     })
     it('returns false if one of the nested node children is false', () => {
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
-      const prompt4 = new MyPrompt(promptForm, promptFunc)
-      const prompt5 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const prompt4 = new MyPrompt(promptVis, promptFunc)
+      const prompt5 = new MyPrompt(promptVis, promptFunc)
       prompt1.children = [prompt2]
       prompt2.children = [prompt3]
       prompt3.children = [prompt4, prompt5]
@@ -124,14 +124,14 @@ describe('Unit::PromptRunner', () => {
   describe('execute', () => {
     it('sends the message', async () => {
       const channel = createMockChannel()
-      const prompt = new MyPrompt(promptForm, promptFunc)
+      const prompt = new MyPrompt(promptVis, promptFunc)
       prompt.children = []
       jest.spyOn(prompt, 'collect')
         .mockResolvedValue({
           data: {},
           message: createMockMessage()
         })
-      const promptSend = jest.spyOn(prompt, 'sendUserFormatMessage')
+      const promptSend = jest.spyOn(prompt, 'sendUserVisualMessage')
       const data = {
         foo: 1
       }
@@ -142,9 +142,9 @@ describe('Unit::PromptRunner', () => {
     })
     it('sends all prompt messages', async () => {
       const channel = createMockChannel()
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       jest.spyOn(prompt1, 'getNext')
         .mockResolvedValue(prompt2)
       jest.spyOn(prompt2, 'getNext')
@@ -156,9 +156,9 @@ describe('Unit::PromptRunner', () => {
         { a: 1 },
         { a: 2, b: 2 }
       ]
-      const sendUserFormatMessageSpies = prompts.map((p, index) => {
+      const sendUserVisualMessageSpies = prompts.map((p, index) => {
         jest.spyOn(p, 'collect').mockResolvedValue(promptsCollectedData[index])
-        return jest.spyOn(p, 'sendUserFormatMessage')
+        return jest.spyOn(p, 'sendUserVisualMessage')
       })
       const initialData = {
         a: 0
@@ -166,24 +166,24 @@ describe('Unit::PromptRunner', () => {
       const runner = new PromptRunner<{}>({})
       runner.initialData = initialData
       await runner.execute(prompt1, channel)
-      expect(sendUserFormatMessageSpies[0]).toHaveBeenCalledWith(
+      expect(sendUserVisualMessageSpies[0]).toHaveBeenCalledWith(
         channel,
         initialData
       )
-      expect(sendUserFormatMessageSpies[1]).toHaveBeenCalledWith(
+      expect(sendUserVisualMessageSpies[1]).toHaveBeenCalledWith(
         channel,
         promptsCollectedData[0]
       )
-      expect(sendUserFormatMessageSpies[2]).toHaveBeenCalledWith(
+      expect(sendUserVisualMessageSpies[2]).toHaveBeenCalledWith(
         channel,
         promptsCollectedData[1]
       )
     })
     it('runs all prompts', async () => {
       const channel = createMockChannel()
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       jest.spyOn(prompt1, 'getNext')
         .mockResolvedValue(prompt2)
       jest.spyOn(prompt2, 'getNext')
@@ -205,9 +205,9 @@ describe('Unit::PromptRunner', () => {
     })
     it('adds each ran prompt into this.ran', async () => {
       const channel = createMockChannel()
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       jest.spyOn(prompt1, 'getNext')
         .mockResolvedValue(prompt2)
       jest.spyOn(prompt2, 'getNext')
@@ -228,9 +228,9 @@ describe('Unit::PromptRunner', () => {
   })
   describe('indexesOf', () => {
     it('calls indexOf', () => {
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       const runner = new PromptRunner<{}>({})
       Object.defineProperty(runner, 'ran', {
         value: [prompt2, prompt3, prompt1]
@@ -246,9 +246,9 @@ describe('Unit::PromptRunner', () => {
   })
   describe('indexOf', () => {
     it('returns the index of the prompt', () => {
-      const prompt1 = new MyPrompt(promptForm, promptFunc)
-      const prompt2 = new MyPrompt(promptForm, promptFunc)
-      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
       const runner = new PromptRunner<{}>({})
       Object.defineProperty(runner, 'ran', {
         value: [prompt2, prompt3, prompt1]
