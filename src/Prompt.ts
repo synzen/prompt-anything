@@ -82,6 +82,19 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   }
 
   /**
+   * Returns the format given the data
+   * 
+   * @param data
+   */
+  getFormat (data: T): FormatInterface {
+    if (typeof this.formatGenerator === 'function') {
+      return this.formatGenerator(data)
+    } else {
+      return this.formatGenerator
+    }
+  }
+
+  /**
    * Asserts that the children of this prompt are valid.
    * If a phase has 2 or more children, then they must all
    * all have condition functions specified.
@@ -175,12 +188,7 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param data Data to generate the user's message
    */
   async sendUserFormatMessage (channel: ChannelInterface, data: T): Promise<MessageInterface> {
-    if (typeof this.formatGenerator === 'function') {
-      const format = this.formatGenerator(data)
-      return this.sendMessage(format, channel)
-    } else {
-      return this.sendMessage(this.formatGenerator, channel)
-    }
+    return this.sendMessage(this.getFormat(data), channel)
   }
 
   /**
