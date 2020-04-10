@@ -227,7 +227,7 @@ describe('Unit::Prompt', () => {
       expect(emit).toHaveBeenCalledWith('inactivity')
     })
   })
-  describe('sendUserVisualMessage', () => {
+  describe('sendUserVisual', () => {
     it('returns the message', async () => {
       const channel = createMockChannel()
       const sentMessage = createMockMessage()
@@ -240,9 +240,9 @@ describe('Unit::Prompt', () => {
       }
       jest.spyOn(prompt, 'getVisual')
         .mockReturnValue(visual)
-      jest.spyOn(prompt, 'sendMessage')
+      jest.spyOn(prompt, 'sendVisual')
         .mockResolvedValue(sentMessage)
-      const returned = await prompt.sendUserVisualMessage(channel, data)
+      const returned = await prompt.sendUserVisual(channel, data)
       expect(returned).toEqual(sentMessage)
     })
     it('sends with the right args', async () => {
@@ -255,13 +255,13 @@ describe('Unit::Prompt', () => {
       const data = {}
       jest.spyOn(prompt, 'getVisual')
         .mockReturnValue(visual)
-      const spy = jest.spyOn(prompt, 'sendMessage')
+      const spy = jest.spyOn(prompt, 'sendVisual')
         .mockResolvedValue(sentMessage)
-      await prompt.sendUserVisualMessage(channel, data)
+      await prompt.sendUserVisual(channel, data)
       expect(spy).toHaveBeenCalledWith(visual, channel)
     })
   })
-  describe('sendMessage', () => {
+  describe('sendVisual', () => {
     const visual = {
       text: 'hwat'
     }
@@ -269,7 +269,7 @@ describe('Unit::Prompt', () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
       prompt.visualGenerator = (): { text: string } => visual
       const channel = createMockChannel()
-      await prompt.sendMessage(visual, channel)
+      await prompt.sendVisual(visual, channel)
       expect(channel.send)
         .toHaveBeenCalledWith(visual)
     })
@@ -279,7 +279,7 @@ describe('Unit::Prompt', () => {
       const returnedMessage = createMockMessage()
       const channel = createMockChannel()
       channel.send.mockResolvedValue(returnedMessage)
-      const returned = await prompt.sendMessage(visual, channel)
+      const returned = await prompt.sendVisual(visual, channel)
       expect(returned).toEqual(returnedMessage)
     })
   })
@@ -380,7 +380,7 @@ describe('Unit::Prompt', () => {
         .mockReturnValue()
       jest.spyOn(MyPrompt.prototype, 'storeBotMessage')
         .mockReturnValue()
-      jest.spyOn(MyPrompt.prototype, 'sendMessage')
+      jest.spyOn(MyPrompt.prototype, 'sendVisual')
         .mockResolvedValue(createMockMessage())
       jest.spyOn(MyPrompt, 'handleCollector')
         .mockReturnValue()

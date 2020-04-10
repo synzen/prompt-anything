@@ -131,7 +131,7 @@ describe('Unit::PromptRunner', () => {
       prompt.children = []
       jest.spyOn(prompt, 'collect')
         .mockResolvedValue({})
-      const promptSend = jest.spyOn(prompt, 'sendUserVisualMessage')
+      const promptSend = jest.spyOn(prompt, 'sendUserVisual')
       const data = {
         foo: 1
       }
@@ -156,9 +156,9 @@ describe('Unit::PromptRunner', () => {
         { a: 1 },
         { a: 2, b: 2 }
       ]
-      const sendUserVisualMessageSpies = prompts.map((p, index) => {
+      const sendUserVisualSpies = prompts.map((p, index) => {
         jest.spyOn(p, 'collect').mockResolvedValue(promptsCollectedData[index])
-        return jest.spyOn(p, 'sendUserVisualMessage')
+        return jest.spyOn(p, 'sendUserVisual')
       })
       const initialData = {
         a: 0
@@ -166,15 +166,15 @@ describe('Unit::PromptRunner', () => {
       const runner = new PromptRunner<{}>({})
       runner.initialData = initialData
       await runner.execute(prompt1, channel)
-      expect(sendUserVisualMessageSpies[0]).toHaveBeenCalledWith(
+      expect(sendUserVisualSpies[0]).toHaveBeenCalledWith(
         channel,
         initialData
       )
-      expect(sendUserVisualMessageSpies[1]).toHaveBeenCalledWith(
+      expect(sendUserVisualSpies[1]).toHaveBeenCalledWith(
         channel,
         promptsCollectedData[0]
       )
-      expect(sendUserVisualMessageSpies[2]).toHaveBeenCalledWith(
+      expect(sendUserVisualSpies[2]).toHaveBeenCalledWith(
         channel,
         promptsCollectedData[1]
       )

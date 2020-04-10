@@ -76,13 +76,13 @@ export class PromptRunner<T> {
     this.ran.push(initialPrompt)
     let thisPrompt: Prompt<T>|null = initialPrompt
     let thisData = this.initialData
-    await thisPrompt.sendUserVisualMessage(channel, thisData)
+    await thisPrompt.sendUserVisual(channel, thisData)
     while (thisPrompt) {
       const promptData: T = await thisPrompt.collect(channel, thisData)
       thisPrompt = await thisPrompt.getNext(promptData)
       thisData = promptData
       if (thisPrompt) {
-        await thisPrompt.sendUserVisualMessage(channel, promptData)
+        await thisPrompt.sendUserVisual(channel, promptData)
         this.ran.push(thisPrompt)
       }
     }
