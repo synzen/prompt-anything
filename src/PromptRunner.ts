@@ -58,7 +58,7 @@ export class PromptRunner<T> {
    * @param initialData Data for the root prompt
    * @param triggerMessage Message that triggered this prompt
    */
-  async run (prompt: Prompt<T>, channel: ChannelInterface): Promise<void> {
+  async run (prompt: Prompt<T>, channel: ChannelInterface): Promise<T> {
     if (!PromptRunner.valid(prompt)) {
       throw new Error('Invalid prompt found. Prompts with more than 1 child must have all its children to have a condition function specified.')
     }
@@ -72,7 +72,7 @@ export class PromptRunner<T> {
    * @param channel Channel
    * @param initialData Data for the root prompt
    */
-  async execute (initialPrompt: Prompt<T>, channel: ChannelInterface): Promise<void> {
+  async execute (initialPrompt: Prompt<T>, channel: ChannelInterface): Promise<T> {
     this.ran.push(initialPrompt)
     let thisPrompt: Prompt<T>|null = initialPrompt
     let thisData = this.initialData
@@ -86,5 +86,6 @@ export class PromptRunner<T> {
         this.ran.push(thisPrompt)
       }
     }
+    return thisData
   }
 }
