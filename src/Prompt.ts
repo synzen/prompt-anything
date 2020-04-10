@@ -163,13 +163,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   }
 
   /**
-   * If this Prompt should collect messages
-   */
-  shouldRunCollector (): boolean {
-    return true
-  }
-
-  /**
    * Send a message
    * 
    * @param format The format for channel.send to send

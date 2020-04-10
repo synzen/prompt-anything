@@ -91,12 +91,6 @@ describe('Unit::Prompt', () => {
       expect(prompt.getFormat({})).toEqual(format)
     })
   })
-  describe('shouldRunCollector', () => {
-    it('returns true', () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      expect(prompt.shouldRunCollector()).toEqual(true)  
-    })
-  })
   describe('static handleMessage', () => {
     const authorID = '3w4ey5ru7t'
     it('emits accept if no error is thrown in func', async () => {
