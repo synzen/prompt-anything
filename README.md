@@ -9,12 +9,12 @@ A modular, testable framework to build prompts of any kind (such as ones within 
 
 The following interfaces should be implemented:
 ```ts
-type FormatInterface = {
+type VisualInterface = {
   text: string;
 }
 
 interface ChannelInterface {
-  send: (format: Format) => Promise<MessageInterface>;
+  send: (visual: Visual) => Promise<MessageInterface>;
 }
 
 interface MessageInterface {
