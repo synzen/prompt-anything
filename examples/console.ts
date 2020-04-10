@@ -53,13 +53,13 @@ class ConsolePrompt<T> extends Prompt<T> {
   // Implement abstract methods. These events are automatically called
   // and should NOT be called manually. These evnts should be emitted
   async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.getRejectVisual(error), channel)
+    await this.sendVisual(ConsolePrompt.getRejectVisual(error), channel)
   }
   async onInactivity(channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.inactivityVisual, channel)
+    await this.sendVisual(ConsolePrompt.inactivityVisual, channel)
   }
   async onExit(message: MessageInterface, channel: ChannelInterface): Promise<void> {
-    await this.sendMessage(ConsolePrompt.exitVisual, channel)
+    await this.sendVisual(ConsolePrompt.exitVisual, channel)
   }
 
   createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
