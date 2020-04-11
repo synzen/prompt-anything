@@ -1,4 +1,5 @@
 export * from './Prompt'
+export * from './PromptNode'
 export * from './PromptRunner'
 export * from './types/generics'
 export * from './errors/Rejection'

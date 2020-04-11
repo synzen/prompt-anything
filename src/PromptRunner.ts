@@ -1,5 +1,6 @@
 import { Prompt } from './Prompt'
 import { ChannelInterface } from './types/generics'
+import { PromptNode } from './PromptNode'
 
 export class PromptRunner<T> {
   initialData: T
@@ -16,7 +17,7 @@ export class PromptRunner<T> {
    * 
    * @param prompt Root prompt
    */
-  static valid<T> (prompt: Prompt<T>): boolean {
+  static valid<T> (prompt: PromptNode<T>): boolean {
     if (!prompt.hasValidChildren()) {
       return false
     }
@@ -58,12 +59,41 @@ export class PromptRunner<T> {
    * @param initialData Data for the root prompt
    * @param triggerMessage Message that triggered this prompt
    */
-  async run (prompt: Prompt<T>, channel: ChannelInterface): Promise<T> {
-    if (!PromptRunner.valid(prompt)) {
-      throw new Error('Invalid prompt found. Prompts with more than 1 child must have all its children to have a condition function specified.')
+  async run (rootNode: PromptNode<T>, channel: ChannelInterface): Promise<T> {
+    if (!PromptRunner.valid(rootNode)) {
+      throw new Error('Invalid rootNode found. Nodes with more than 1 child must have all its children have a condition function specified.')
     }
-    return this.execute(prompt, channel)
+    return this.execute(rootNode, channel)
   }
+
+  // /**
+  //  * Execute the prompt without validating
+  //  * 
+  //  * @param prompt Root prompt
+  //  * @param channel Channel
+  //  * @param initialData Data for the root prompt
+  //  */
+  // async execute (rootNode: PromptNode<T>, channel: ChannelInterface): Promise<T> {
+  //   this.ran.push(rootNode.prompt)
+  //   let thisNode: PromptNode<T>|null = rootNode
+  //   let thisData = this.initialData
+  //   await thisNode.prompt.sendUserVisual(channel, thisData)
+  //   while (thisNode) {
+  //     let thisPrompt: Prompt<T> = thisNode.prompt
+  //     const { data, terminate } = await thisPrompt.collect(channel, thisData)
+  //     thisData = data
+  //     if (terminate) {
+  //       break
+  //     }
+  //     thisNode = await thisNode.getNext(data)
+  //     if (thisNode) {
+  //       thisPrompt = thisNode.prompt
+  //       await thisPrompt.sendUserVisual(channel, data)
+  //       this.ran.push(thisPrompt)
+  //     }
+  //   }
+  //   return thisData
+  // }
 
   /**
    * Execute the prompt without validating
@@ -72,19 +102,19 @@ export class PromptRunner<T> {
    * @param channel Channel
    * @param initialData Data for the root prompt
    */
-  async execute (initialPrompt: Prompt<T>, channel: ChannelInterface): Promise<T> {
-    this.ran.push(initialPrompt)
-    let thisPrompt: Prompt<T>|null = initialPrompt
+  async execute (rootNode: PromptNode<T>, channel: ChannelInterface): Promise<T> {
+    let thisNode: PromptNode<T>|null = rootNode
     let thisData = this.initialData
-    await thisPrompt.sendUserVisual(channel, thisData)
-    while (thisPrompt) {
-      const promptData: T = await thisPrompt.collect(channel, thisData)
-      thisPrompt = await thisPrompt.getNext(promptData)
-      thisData = promptData
-      if (thisPrompt) {
-        await thisPrompt.sendUserVisual(channel, promptData)
-        this.ran.push(thisPrompt)
+    while (thisNode) {
+      const thisPrompt: Prompt<T> = thisNode.prompt
+      await thisNode.prompt.sendUserVisual(channel, thisData)
+      const { data, terminate } = await thisPrompt.collect(channel, thisData)
+      this.ran.push(thisNode.prompt)
+      thisData = data
+      if (terminate) {
+        break
       }
+      thisNode = await thisNode.getNext(data)
     }
     return thisData
   }

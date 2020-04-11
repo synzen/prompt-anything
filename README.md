@@ -57,7 +57,7 @@ See the `examples/console.ts` for a functioning implementation that accepts inpu
 
 Unit testing is straightforward since the tree of responses is built up from individual, isolated prompts represented by functions that can be exported for testing.
 
-If the data is an object, pure functions should be used for prompt functions since each prompt should ideally depend on the exact object given by the previous prompt (unmodified by the current one).
+If the data is an object, prompt functions should be pure since each prompt should ideally depend on the exact object given by the previous prompt (unmodified by the current one).
 
 Integration testing can be asserted on the execution order of the phases. A "flush promises" method must be used.
 ```ts
@@ -118,25 +118,30 @@ it('runs correctly for age <= 20', () => {
     text: `Wow ${data.name}, you are pretty young at ${data.age} years old!`
   }), undefined, async (data) => !!data.age && data.age <= 20)
 
-  askName.setChildren([askAge])
+  const askNameNode = new PromptNode(askName)
+  const askAgeNode = new PromptNode(askAge)
+  const tooYoungNode = new PromptNode(tooYoung)
+  const tooOldNode = new PromptNode(tooOld)
+  askNameNode.setChildren([askAgeNode])
   // Nodes with more than 1 sibling must have conditions defined
-  askAge.setChildren([tooOld, tooYoung])
+  askAgeNode.setChildren([tooOldNode, tooYoungNode])
 
   const message = createMockMessage()
   const name = 'George'
   const age = '30'
   const runner = new PromptRunner<AgeData>()
-  const promise = runner.run(askName, message)
+  const promise = runner.run(askNameNode, message)
   // Wait for all pending promise callbacks to be executed for the emitter to set up
   await flushPromises()
   // Accept the name
   emitter.emit('message', createMockMessage(name))
+  await flushPromises()
   // Assert askName ran first
   expect(runner.indexOf(askName)).toEqual(0)
-  // Wait for all pending promise callbacks to be executed for message to be accepted
   await flushPromises()
   // Accept the age
   emitter.emit('message', createMockMessage(age))
+  await flushPromises()
   // Assert askAge ran second
   expect(runner.indexOf(askAge)).toEqual(1)
   await promise

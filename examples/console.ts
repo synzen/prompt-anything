@@ -1,4 +1,4 @@
-import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector, ChannelInterface, VisualInterface, Rejection } from '../src/index'
+import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector, ChannelInterface, VisualInterface, Rejection, PromptNode } from '../src/index'
 import { EventEmitter } from 'events'
 import { createInterface } from 'readline'
 
@@ -133,14 +133,19 @@ const tooYoung = new ConsolePrompt<AgePromptData>((data) => ({
   text: `Woah ${data.name}, at ${data.age} you can't drink yet.`
 }), undefined, async (data) => !!data.age && data.age <= 21)
 
-askName.setChildren([askAge])
+// Create the nodes. Prompts can be used by different nodes
+const askNameNode = new PromptNode(askName)
+const askAgeNode = new PromptNode(askAge)
+const tooOldNode = new PromptNode(tooOld)
+const tooYoungNode = new PromptNode(tooYoung)
+askNameNode.setChildren([askAgeNode])
 // Nodes with more than 1 sibling must have conditions defined
-askAge.setChildren([tooOld, tooYoung])
+askAgeNode.setChildren([tooOldNode, tooYoungNode])
 
 // Message and messageCollectorCreator must be implemented by user
 const runner = new PromptRunner({})
 const channel = new ConsoleChannel()
-runner.run(askName, channel)
+runner.run(askNameNode, channel)
   .catch(err => {
     // From the error listener of a prompt
     console.error(err)

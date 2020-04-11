@@ -91,41 +91,6 @@ describe('Unit::Prompt', () => {
       expect(prompt.getVisual({})).toEqual(visual)
     })
   })
-  describe('hasValidChildren', () => {
-    it('returns true for prompt with 0 or 1 child', () => {
-      const prompt = new MyPrompt(promptVis)
-      prompt.children = []
-      expect(prompt.hasValidChildren()).toEqual(true)
-      prompt.children = [new MyPrompt(promptVis)]
-      expect(prompt.hasValidChildren()).toEqual(true)
-    })
-    it('returns false for 2+ children with no condition', () => {
-      const prompt = new MyPrompt(promptVis)
-      const child1 = new MyPrompt(promptVis)
-      Object.defineProperty(child1, 'condition', {
-        value: undefined
-      })
-      const child2 = new MyPrompt(promptVis)
-      Object.defineProperty(child2, 'condition', {
-        value: undefined
-      })
-      prompt.children = [child1, child2]
-      expect(prompt.hasValidChildren()).toEqual(false)
-    })
-    it('returns true for 2+ children with conditions', () => {
-      const prompt = new MyPrompt(promptVis)
-      const child1 = new MyPrompt(promptVis)
-      Object.defineProperty(child1, 'condition', {
-        value: jest.fn()
-      })
-      const child2 = new MyPrompt(promptVis)
-      Object.defineProperty(child2, 'condition', {
-        value: jest.fn()
-      })
-      prompt.children = [child1, child2]
-      expect(prompt.hasValidChildren()).toEqual(true)
-    })
-  })
   describe('static handleMessage', () => {
     const authorID = '3w4ey5ru7t'
     it('emits accept if no error is thrown in func', async () => {
@@ -283,64 +248,6 @@ describe('Unit::Prompt', () => {
       expect(returned).toEqual(returnedMessage)
     })
   })
-  describe('getNext', () => {
-    it('returns the right child', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const promptC1 = new MyPrompt(promptVis, promptFunc)
-      const promptC2 = new MyPrompt(promptVis, promptFunc)
-      const promptC3 = new MyPrompt(promptVis, promptFunc)
-      prompt.children = [promptC1, promptC2, promptC3]
-      Object.defineProperty(promptC1, 'condition', {
-        value: async () => false
-      })
-      Object.defineProperty(promptC2, 'condition', {
-        value: async () => true
-      })
-      Object.defineProperty(promptC3, 'condition', {
-        value: async () => true
-      })
-      const message = createMockMessage()
-      await expect(prompt.getNext(message))
-        .resolves.toEqual(promptC2)
-    })
-    it('returns null for no elgiible children', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const promptC1 = new MyPrompt(promptVis, promptFunc)
-      const promptC2 = new MyPrompt(promptVis, promptFunc)
-      prompt.children = [promptC1, promptC2]
-      Object.defineProperty(promptC1, 'condition', {
-        value: async () => false
-      })
-      Object.defineProperty(promptC2, 'condition', {
-        value: async () => false
-      })
-      const message = createMockMessage()
-      await expect(prompt.getNext(message))
-        .resolves.toEqual(null)
-    })
-    it('returns one with no condition if it exists', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const promptC1 = new MyPrompt(promptVis, promptFunc)
-      const promptC2 = new MyPrompt(promptVis, promptFunc)
-      prompt.children = [promptC1, promptC2]
-      Object.defineProperty(promptC1, 'condition', {
-        value: async () => false
-      })
-      const message = createMockMessage()
-      await expect(prompt.getNext(message))
-        .resolves.toEqual(promptC2)
-    })
-  })
-  describe('terminateHere', () => {
-    it('clears the children', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.children = [
-        new MyPrompt(promptVis, promptFunc)
-      ]
-      await prompt.terminateHere()
-      expect(prompt.children).toEqual([])
-    })
-  })
   describe('storeUserMessage', () => {
     it('stores correctly', () => {
       const prompt = new MyPrompt(promptVis)
@@ -372,8 +279,6 @@ describe('Unit::Prompt', () => {
       emitter = new EventEmitter()
       prompt = new MyPrompt(promptVis, promptFunc)
       channel = createMockChannel()
-      terminateSpy = jest.spyOn(prompt, 'terminateHere')
-        .mockReturnValue()
       jest.spyOn(MyPrompt.prototype, 'createCollector')
         .mockReturnValue(emitter)
       jest.spyOn(MyPrompt.prototype, 'storeUserMessage')
@@ -391,7 +296,10 @@ describe('Unit::Prompt', () => {
         foo: 'bar'
       }
       const result = await promptNoFunc.collect(channel, data)
-      expect(result).toEqual(data)
+      expect(result).toEqual({
+        data,
+        terminate: false
+      })
     })
     describe('collector exit', () => {
       beforeEach(() => {
@@ -399,11 +307,16 @@ describe('Unit::Prompt', () => {
           .mockResolvedValue()
       })
       it('terminates on collector exit', async () => {
-        const promptRun = prompt.collect(channel, {})
+        const data = {
+          foo: 'bbb'
+        }
+        const promptRun = prompt.collect(channel, data)
         emitter.emit('exit')
-        await promptRun
-        expect(terminateSpy)
-          .toHaveBeenCalledTimes(1)
+        const result = await promptRun
+        expect(result).toEqual({
+          data,
+          terminate: true
+        })
       })
       it('stores the user message', async () => {
         const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
@@ -427,7 +340,6 @@ describe('Unit::Prompt', () => {
       })
       it('handles the error from onExit', async () => {
         const error = new Error('dtguj')
-        const terminateHere = jest.spyOn(prompt, 'terminateHere')
         const emit = jest.spyOn(emitter, 'emit')
         jest.spyOn(prompt, 'onExit')
           .mockRejectedValue(error)
@@ -436,8 +348,6 @@ describe('Unit::Prompt', () => {
         emitter.emit('exit', exitMessage)
         // Reject the run
         await expect(promptRun).rejects.toThrow(error)
-        // Don't proceed to the next phase
-        expect(terminateHere).toHaveBeenCalled()
         // Notify the user to clean up their collector
         expect(emit).toHaveBeenCalledWith('stop')
       })
@@ -448,11 +358,16 @@ describe('Unit::Prompt', () => {
           .mockResolvedValue()
       })
       it('terminates on collector inactivity', async () => {
-        const promptRun = prompt.collect(channel, {})
+        const data = {
+          foo: 'bar'
+        }
+        const promptRun = prompt.collect(channel, data)
         emitter.emit('inactivity')
-        await promptRun
-        expect(terminateSpy)
-          .toHaveBeenCalledTimes(1)
+        const result = await promptRun
+        expect(result).toEqual({
+          data,
+          terminate: true
+        })
       })
       it('calls onInactivity', async () => {
         const onInactivity = jest.spyOn(prompt, 'onInactivity')
@@ -466,7 +381,6 @@ describe('Unit::Prompt', () => {
       })
       it('handles the error from onActivity', async () => {
         const error = new Error('dtguj')
-        const terminateHere = jest.spyOn(prompt, 'terminateHere')
         const emit = jest.spyOn(emitter, 'emit')
         jest.spyOn(prompt, 'onInactivity')
           .mockRejectedValue(error)
@@ -474,8 +388,6 @@ describe('Unit::Prompt', () => {
         emitter.emit('inactivity')
         // Reject the run
         await expect(promptRun).rejects.toThrow(error)
-        // Don't proceed to the next phase
-        expect(terminateHere).toHaveBeenCalled()
         // Notify the user to clean up their collector
         expect(emit).toHaveBeenCalledWith('stop')
       })
@@ -483,11 +395,9 @@ describe('Unit::Prompt', () => {
     describe('collector error', () => {
       it('rejects prompt run and terminates', async () => {
         const error = new Error('qateswgry')
-        const terminateHere = jest.spyOn(prompt, 'terminateHere')
         const promptRun = prompt.collect(channel, {})
         emitter.emit('error', error)
         await expect(promptRun).rejects.toThrow(error)
-        expect(terminateHere).toHaveBeenCalledTimes(1)
       })
     })
     describe('collector reject', () => {
@@ -532,8 +442,6 @@ describe('Unit::Prompt', () => {
         emitter.emit('reject', createMockMessage(), error)
         // Reject the run
         await expect(promptRun).rejects.toThrow(error)
-        // Don't proceed to the next phase
-        expect(terminateSpy).toHaveBeenCalled()
         // Notify the user to clean up their collector
         expect(emit).toHaveBeenCalledWith('stop')
       })
@@ -546,7 +454,10 @@ describe('Unit::Prompt', () => {
         }
         const promptRun = prompt.collect(channel, {})
         emitter.emit('accept', acceptMessage, acceptData)
-        await expect(promptRun).resolves.toEqual(acceptData)
+        await expect(promptRun).resolves.toEqual({
+          data: acceptData,
+          terminate: false
+        })
       })
       it('stores the messages', async () => {
         const acceptMessage = createMockMessage()

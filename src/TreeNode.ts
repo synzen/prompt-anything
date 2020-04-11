@@ -6,7 +6,7 @@ export class TreeNode<T> {
    * 
    * @param trees 
    */
-  setChildren (trees: Array<T>): TreeNode<T> {
+  setChildren (trees: Array<T>): this {
     this.children = trees
     return this
   }
@@ -16,7 +16,7 @@ export class TreeNode<T> {
    * 
    * @param tree
    */
-  addChild (tree: T): TreeNode<T> {
+  addChild (tree: T): this {
     this.children.push(tree)
     return this
   }

@@ -1,7 +1,7 @@
 import { Rejection } from './errors/Rejection'
-import { TreeNode } from './TreeNode';
 import { MessageInterface, ChannelInterface, VisualInterface } from './types/generics';
 import { EventEmitter } from 'events';
+import { PromptResult } from './PromptResult';
 
 export type PromptFunction<T> = (this: Prompt<T>, m: MessageInterface, data: T) => Promise<T>
 
@@ -31,7 +31,7 @@ export type StoredMessage = {
   fromUser: boolean;
 }
 
-export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
+export abstract class Prompt<T> {
   /**
    * Create a collector that is part of a prompt
    * 
@@ -74,7 +74,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   readonly condition?: PromptCondition<T>
 
   constructor(visualGenerator: VisualGenerator<T>|VisualInterface, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 0) {
-    super()
     this.visualGenerator = visualGenerator
     this.duration = duration
     this.function = f
@@ -92,25 +91,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
     } else {
       return this.visualGenerator
     }
-  }
-
-  /**
-   * Asserts that the children of this prompt are valid.
-   * If a phase has 2 or more children, then they must all
-   * all have condition functions specified.
-   */
-  hasValidChildren (): boolean {
-    const children = this.children
-    if (children.length <= 1) {
-      return true
-    }
-    // There are more 2 or more children - they must have conditions
-    for (const child of children) {
-      if (!child.condition) {
-        return false
-      }
-    }
-    return true
   }
 
   /**
@@ -185,29 +165,6 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
   }
 
   /**
-   * Set all children to empty so there is no next prompt.
-   */
-  terminateHere (): void {
-    this.setChildren([])
-  }
-
-  /**
-   * Determine what the next prompt is given a message and data.
-   * 
-   * @param data The data before this prompt
-   */
-  async getNext (data: T): Promise<Prompt<T>|null> {
-    const { children } = this
-    for (let i = 0; i < children.length; ++i) {
-      const child = children[i]
-      if (!child.condition || await child.condition(data)) {
-        return child
-      }
-    }
-    return null
-  }
-
-  /**
    * Store a message sent by the user into this prompt's store
    * 
    * @param message Message sent by the user
@@ -238,10 +195,10 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
    * @param channel The channel to collect from
    * @param data The data before this prompt
    */
-  collect (channel: ChannelInterface, data: T): Promise<T> {
+  collect (channel: ChannelInterface, data: T): Promise<PromptResult<T>> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
-        resolve(data)
+        resolve(new PromptResult(data))
         return
       }
       this.collector = this.createCollector(channel, data)
@@ -252,28 +209,25 @@ export abstract class Prompt<T> extends TreeNode<Prompt<T>> {
       // Internally handled events
       collector.once('error', (err: Error) => {
         collector.emit('stop')
-        this.terminateHere()
         reject(err)
       })
       collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
         this.storeUserMessage(acceptMessage)
         collector.emit('stop')
-        resolve(acceptData)
+        resolve(new PromptResult(acceptData))
       })
       // User-overridden events
       collector.once('inactivity', (): void => {
         collector.emit('stop')
-        this.terminateHere()
         this.onInactivity(channel, data)
-          .then(() => resolve(data))
+          .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
       collector.once('exit', (exitMessage: MessageInterface) => {
         this.storeUserMessage(exitMessage)
         collector.emit('stop')
-        this.terminateHere()
         this.onExit(exitMessage, channel, data)
-          .then(() => resolve(data))
+          .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
