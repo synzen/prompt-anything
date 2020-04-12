@@ -285,6 +285,39 @@ describe('Unit::PromptRunner', () => {
       const returned = await runner.execute(node1, channel)
       expect(returned).toEqual(prompt3Returned.data)
     })
+    it('does not run any more when a prompt terminates', async () => {
+      const channel = createMockChannel()
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const node1 = new PromptNode(prompt1)
+      node1.prompt = prompt1
+      const node2 = new PromptNode(prompt2)
+      node2.prompt = prompt2
+      const node3 = new PromptNode(prompt3)
+      node3.prompt = prompt3
+      jest.spyOn(node1, 'getNext')
+        .mockResolvedValue(node2)
+      jest.spyOn(node2, 'getNext')
+        .mockResolvedValue(node3)
+      jest.spyOn(node3, 'getNext')
+        .mockResolvedValue(null)
+      jest.spyOn(prompt1, 'collect').mockResolvedValue({
+        data: {},
+        terminate: false
+      })
+      jest.spyOn(prompt2, 'collect').mockResolvedValue({
+        data: {},
+        terminate: true
+      })
+      const prompt3Collect = jest.spyOn(prompt3, 'collect').mockResolvedValue({
+        data: {},
+        terminate: true
+      })
+      const runner = new PromptRunner<{}>({})
+      await runner.execute(node1, channel)
+      expect(prompt3Collect).not.toHaveBeenCalled()
+    })
   })
   describe('indexesOf', () => {
     it('calls indexOf', () => {

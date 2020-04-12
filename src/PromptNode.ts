@@ -48,20 +48,20 @@ export class PromptNode<T> extends TreeNode<PromptNode<T>> {
   /**
    * Sets the children of this node.
    * 
-   * @param trees 
+   * @param nodes
    */
-  setChildren (trees: Array<PromptNode<T>>): this {
-    this.children = trees
+  setChildren (nodes: Array<PromptNode<T>>): this {
+    this.children = nodes
     return this
   }
 
   /**
    * Push a new node to this node's children.
    * 
-   * @param tree
+   * @param node
    */
-  addChild (tree: PromptNode<T>): this {
-    this.children.push(tree)
+  addChild (node: PromptNode<T>): this {
+    this.children.push(node)
     return this
   }
 }

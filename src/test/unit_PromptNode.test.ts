@@ -118,4 +118,23 @@ describe('Unit::PromptNode', () => {
         .resolves.toEqual(node.children[1])
     })
   })
+  describe('addChild', () => {
+    it('pushes the node to children', () => {
+      const prompt = new MyPrompt(promptVis)
+      const prompt2 = new MyPrompt(promptVis)
+      const node = new PromptNode(prompt)
+      const node2 = new PromptNode(prompt2)
+      node.addChild(node2)
+      expect(node.children).toEqual([node2])
+      node.addChild(node2)
+      expect(node.children).toEqual([node2, node2])
+    })
+    it('returns this', () => {
+      const prompt = new MyPrompt(promptVis)
+      const node = new PromptNode(prompt)
+      const node2 = new PromptNode(prompt)
+      const returned = node.addChild(node2)
+      expect(returned).toEqual(node)
+    })
+  })
 })
