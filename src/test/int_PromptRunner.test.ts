@@ -2,7 +2,6 @@ import { Prompt, VisualGenerator, PromptFunction, PromptCondition } from "../Pro
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
-import { MessageInterface } from "../types/generics";
 import { PromptNode } from "../PromptNode";
 
 async function flushPromises(): Promise<void> {
@@ -36,13 +35,13 @@ const promptForm: VisualGenerator<{}> = () => ({
 const promptFunc: PromptFunction<{}> = async () => ({})
 
 class MyPrompt<T> extends Prompt<T> {
-  onReject(message: MessageInterface, error: Rejection): Promise<void> {
+  onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   onInactivity(): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  onExit(message: MessageInterface): Promise<void> {
+  onExit(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   createCollector (): EventEmitter {

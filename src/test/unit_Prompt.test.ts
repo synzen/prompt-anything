@@ -1,16 +1,15 @@
 import { Prompt } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
-import { MessageInterface } from "../types/generics";
 
 class MyPrompt<T> extends Prompt<T> {
-  onReject(message: MessageInterface, error: Rejection): Promise<void> {
+  onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   onInactivity(): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  onExit(message: MessageInterface): Promise<void> {
+  onExit(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   createCollector (): EventEmitter {
@@ -273,7 +272,6 @@ describe('Unit::Prompt', () => {
   describe('collect', () => {
     let emitter: EventEmitter
     let prompt: Prompt<object>
-    let terminateSpy: jest.SpyInstance
     let channel: MockChannel
     beforeEach(() => {
       emitter = new EventEmitter()

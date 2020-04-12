@@ -1,49 +1,25 @@
 import { Prompt, VisualGenerator, PromptFunction } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
-import { MessageInterface } from "../types/generics"
-import { Rejection } from "../errors/Rejection"
 import { PromptNode } from "../PromptNode"
 
 jest.mock('../Prompt')
 jest.mock('../PromptNode')
 
 class MyPrompt extends Prompt<{}> {
-  onReject(message: MessageInterface, error: Rejection): Promise<void> {
+  onReject(): Promise<void> {
     throw new Error("Method not implemented.")
   }
   onInactivity(): Promise<void> {
     throw new Error("Method not implemented.")
   }
-  onExit(message: MessageInterface): Promise<void> {
+  onExit(): Promise<void> {
     throw new Error("Method not implemented.")
   }
   createCollector (): EventEmitter {
     return new EventEmitter()
   }
 }
-
-type MockMessage = {
-  author: {
-    id: string;
-  };
-  channel: {
-    createMessageCollector: jest.Mock;
-    send: jest.Mock;
-  };
-  content: string;
-}
-
-const createMockMessage = (content = ''): MockMessage => ({
-  author: {
-    id: '1'
-  },
-  channel: {
-    createMessageCollector: jest.fn(),
-    send: jest.fn(() => Promise.resolve())
-  },
-  content: content
-})
 
 type MockChannel = {
   send: jest.Mock;
