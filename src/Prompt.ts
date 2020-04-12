@@ -3,11 +3,11 @@ import { MessageInterface, ChannelInterface, VisualInterface } from './types/gen
 import { EventEmitter } from 'events';
 import { PromptResult } from './PromptResult';
 
-export type PromptFunction<T> = (this: Prompt<T>, m: MessageInterface, data: T) => Promise<T>
+export type PromptFunction<DataType> = (this: Prompt<DataType>, m: MessageInterface, data: DataType) => Promise<DataType>
 
-export interface PromptCollector<T> extends EventEmitter {
+export interface PromptCollector<DataType> extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
-  emit(event: 'accept', message: MessageInterface, data: T): boolean;
+  emit(event: 'accept', message: MessageInterface, data: DataType): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
   emit(event: 'inactivity'): boolean;
   emit(event: 'error', error: Error): boolean;
@@ -15,30 +15,30 @@ export interface PromptCollector<T> extends EventEmitter {
   emit(event: 'stop'): boolean;
   on(event: 'message', listener: (message: MessageInterface) => void): this;
   on(event: 'reject', listener: (message: MessageInterface, error: Rejection) => void): this;
-  once(event: 'accept', listener: (message: MessageInterface, data: T) => void): this;
+  once(event: 'accept', listener: (message: MessageInterface, data: DataType) => void): this;
   once(event: 'exit', listener: (message: MessageInterface) => void): this;
   once(event: 'inactivity', listener: () => void): this;
   once(event: 'error', listener: (error: Error) => void): this;
   once(event: 'stop', listener: () => void): this;
 }
 
-export type VisualGenerator<T> = (data: T) => VisualInterface
+export type VisualGenerator<DataType> = (data: DataType) => VisualInterface
 
-export type PromptCondition<T> = (data: T) => Promise<boolean>;
+export type PromptCondition<DataType> = (data: DataType) => Promise<boolean>;
 
 export type StoredMessage = {
   message: MessageInterface;
   fromUser: boolean;
 }
 
-export abstract class Prompt<T> {
+export abstract class Prompt<DataType> {
   /**
    * Create a collector that is part of a prompt
    * 
    * @param channel Channel to create the collector in
    * @param data Prompt data
    */
-  abstract createCollector(channel: ChannelInterface, data: T): PromptCollector<T>;
+  abstract createCollector(channel: ChannelInterface, data: DataType): PromptCollector<DataType>;
 
   /**
    * When a message is rejected, this function is additionally called
@@ -48,14 +48,14 @@ export abstract class Prompt<T> {
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface, data: T): Promise<void>;
+  abstract onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface, data: DataType): Promise<void>;
 
   /**
    * When the collector expires, call this function
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onInactivity(channel: ChannelInterface, data: T): Promise<void>;
+  abstract onInactivity(channel: ChannelInterface, data: DataType): Promise<void>;
 
   /**
    * When a message specifies it wants to exit the prompt,
@@ -65,15 +65,15 @@ export abstract class Prompt<T> {
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onExit(message: MessageInterface, channel: ChannelInterface, data: T): Promise<void>;
-  visualGenerator: VisualGenerator<T>|VisualInterface
-  collector?: PromptCollector<T>
+  abstract onExit(message: MessageInterface, channel: ChannelInterface, data: DataType): Promise<void>;
+  visualGenerator: VisualGenerator<DataType>|VisualInterface
+  collector?: PromptCollector<DataType>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
-  readonly function?: PromptFunction<T>
-  readonly condition?: PromptCondition<T>
+  readonly function?: PromptFunction<DataType>
+  readonly condition?: PromptCondition<DataType>
 
-  constructor(visualGenerator: VisualGenerator<T>|VisualInterface, f?: PromptFunction<T>, condition?: PromptCondition<T>, duration = 0) {
+  constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType>, condition?: PromptCondition<DataType>, duration = 0) {
     this.visualGenerator = visualGenerator
     this.duration = duration
     this.function = f
@@ -85,7 +85,7 @@ export abstract class Prompt<T> {
    * 
    * @param data
    */
-  getVisual (data: T): VisualInterface {
+  getVisual (data: DataType): VisualInterface {
     if (typeof this.visualGenerator === 'function') {
       return this.visualGenerator(data)
     } else {
@@ -101,7 +101,7 @@ export abstract class Prompt<T> {
    * @param data Prompt data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<T> (emitter: PromptCollector<T>, func: PromptFunction<T>, data?: T, duration?: number): void {
+  static handleCollector<DataType> (emitter: PromptCollector<DataType>, func: PromptFunction<DataType>, data?: DataType, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -126,7 +126,7 @@ export abstract class Prompt<T> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<T> (emitter: PromptCollector<T>, message: MessageInterface, func: PromptFunction<T>, data?: T): Promise<void> {
+  static async handleMessage<DataType> (emitter: PromptCollector<DataType>, message: MessageInterface, func: PromptFunction<DataType>, data?: DataType): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
@@ -160,7 +160,7 @@ export abstract class Prompt<T> {
    * @param message The MessageInterface before this prompt
    * @param data Data to generate the user's message
    */
-  async sendUserVisual (channel: ChannelInterface, data: T): Promise<MessageInterface> {
+  async sendUserVisual (channel: ChannelInterface, data: DataType): Promise<MessageInterface> {
     return this.sendVisual(this.getVisual(data), channel)
   }
 
@@ -195,7 +195,7 @@ export abstract class Prompt<T> {
    * @param channel The channel to collect from
    * @param data The data before this prompt
    */
-  collect (channel: ChannelInterface, data: T): Promise<PromptResult<T>> {
+  collect (channel: ChannelInterface, data: DataType): Promise<PromptResult<DataType>> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
         resolve(new PromptResult(data))
@@ -211,7 +211,7 @@ export abstract class Prompt<T> {
         collector.emit('stop')
         reject(err)
       })
-      collector.once('accept', (acceptMessage: MessageInterface, acceptData: T): void => {
+      collector.once('accept', (acceptMessage: MessageInterface, acceptData: DataType): void => {
         this.storeUserMessage(acceptMessage)
         collector.emit('stop')
         resolve(new PromptResult(acceptData))

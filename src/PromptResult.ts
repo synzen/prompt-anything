@@ -1,8 +1,8 @@
-export class PromptResult<T> {
-  data: T
+export class PromptResult<DataType> {
+  data: DataType
   terminate: boolean
   
-  constructor (data: T, terminate = false) {
+  constructor (data: DataType, terminate = false) {
     this.data = data
     this.terminate = terminate
   }

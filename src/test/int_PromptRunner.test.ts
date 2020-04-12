@@ -34,7 +34,7 @@ const promptForm: VisualGenerator<{}> = () => ({
 })
 const promptFunc: PromptFunction<{}> = async () => ({})
 
-class MyPrompt<T> extends Prompt<T> {
+class MyPrompt<DataType> extends Prompt<DataType> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }

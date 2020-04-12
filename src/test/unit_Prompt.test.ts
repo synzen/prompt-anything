@@ -2,7 +2,7 @@ import { Prompt } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
 
-class MyPrompt<T> extends Prompt<T> {
+class MyPrompt<DataType> extends Prompt<DataType> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }

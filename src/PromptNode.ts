@@ -1,10 +1,10 @@
 import { Prompt } from "./Prompt"
 import { TreeNode } from "./TreeNode"
 
-export class PromptNode<T> extends TreeNode<PromptNode<T>> {
-  prompt: Prompt<T>
+export class PromptNode<DataType> extends TreeNode<PromptNode<DataType>> {
+  prompt: Prompt<DataType>
 
-  constructor (prompt: Prompt<T>) {
+  constructor (prompt: Prompt<DataType>) {
     super()
     this.prompt = prompt
   }
@@ -33,7 +33,7 @@ export class PromptNode<T> extends TreeNode<PromptNode<T>> {
    * 
    * @param data The data before this prompt
    */
-  async getNext (data: T): Promise<PromptNode<T>|null> {
+  async getNext (data: DataType): Promise<PromptNode<DataType>|null> {
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
@@ -50,7 +50,7 @@ export class PromptNode<T> extends TreeNode<PromptNode<T>> {
    * 
    * @param nodes
    */
-  setChildren (nodes: Array<PromptNode<T>>): this {
+  setChildren (nodes: Array<PromptNode<DataType>>): this {
     this.children = nodes
     return this
   }
@@ -60,7 +60,7 @@ export class PromptNode<T> extends TreeNode<PromptNode<T>> {
    * 
    * @param node
    */
-  addChild (node: PromptNode<T>): this {
+  addChild (node: PromptNode<DataType>): this {
     this.children.push(node)
     return this
   }
