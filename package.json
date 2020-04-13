@@ -1,9 +1,17 @@
 {
   "name": "prompt-anything",
   "version": "0.0.1",
-  "description": "Modular framework to create prompts for anything",
+  "description": "Framework to build a a tree of modular and interactable prompts for anything",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "homepage": "https://github.com/synzen/prompt-anything",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/synzen/prompt-anything.git"
+  },
+  "bugs": {
+    "url": "https://github.com/synzen/prompt-anything/issues"
+  },
   "files": [
     "build/**/*"
   ],
