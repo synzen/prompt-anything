@@ -1,7 +1,9 @@
 import { Rejection } from './errors/Rejection'
-import { MessageInterface, ChannelInterface, VisualInterface } from './types/generics';
 import { EventEmitter } from 'events';
 import { PromptResult } from './PromptResult';
+import { MessageInterface } from './interfaces/Message';
+import { VisualInterface } from './interfaces/Visual';
+import { ChannelInterface } from './interfaces/Channel';
 
 export type PromptFunction<DataType> = (this: Prompt<DataType>, m: MessageInterface, data: DataType) => Promise<DataType>
 
@@ -24,7 +26,7 @@ export interface PromptCollector<DataType> extends EventEmitter {
 
 export type VisualGenerator<DataType> = (data: DataType) => VisualInterface
 
-export type PromptCondition<DataType> = (data: DataType) => Promise<boolean>;
+export type PromptCondition<DataType> = (data: DataType) => Promise<boolean>
 
 export type StoredMessage = {
   message: MessageInterface;

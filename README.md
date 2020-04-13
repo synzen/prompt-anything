@@ -20,7 +20,7 @@ A modular and customizable framework to build prompts of any kind (such as ones 
 
 The following interfaces should be implemented:
 ```ts
-type VisualInterface = {
+interface VisualInterface = {
   text: string;
 }
 

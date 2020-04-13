@@ -1,6 +1,6 @@
 import { Prompt } from './Prompt'
-import { ChannelInterface } from './types/generics'
 import { PromptNode } from './PromptNode'
+import { ChannelInterface } from './interfaces/Channel'
 
 export class PromptRunner<DataType> {
   initialData: DataType
