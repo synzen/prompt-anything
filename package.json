@@ -16,7 +16,7 @@
     "test-watch": "jest --watch"
   },
   "author": "synzen",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {},
   "devDependencies": {
     "@types/jest": "^25.2.1",
