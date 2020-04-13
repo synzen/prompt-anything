@@ -2,6 +2,7 @@ import { Prompt, VisualGenerator, PromptFunction } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { PromptNode } from "../PromptNode"
+import { ChannelInterface } from "../interfaces/Channel"
 
 jest.mock('../Prompt')
 jest.mock('../PromptNode')
@@ -324,6 +325,89 @@ describe('Unit::PromptRunner', () => {
       })
       expect(runner.indexOf(prompt1))
         .toEqual(2)
+    })
+  })
+  describe('getFirstNode', () => {
+    it('throws an error if there is a prompt with no condition', async () => {
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt1, 'condition', {
+        value: async () => false
+      })
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt2, 'condition', {
+        value: undefined
+      })
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt3, 'condition', {
+        value: async () => false
+      })
+      const prompt1Node = new PromptNode(prompt1)
+      prompt1Node.prompt = prompt1
+      const prompt2Node = new PromptNode(prompt2)
+      prompt2Node.prompt = prompt2
+      const prompt3Node = new PromptNode(prompt3)
+      prompt3Node.prompt = prompt3
+      const runner = new PromptRunner({})
+      await expect(runner.getFirstNode([
+        prompt1Node,
+        prompt2Node,
+        prompt3Node
+      ])).rejects.toThrow('Invalid node at index 1. Array of prompt nodes requires all prompts to have condition functions specified to find a condition that passes.')
+    })
+    it('returns the first node with a passing condition', () => {
+      const prompt1 = new MyPrompt(promptVis, promptFunc, async () => false)
+      const prompt2 = new MyPrompt(promptVis, promptFunc, async () => true)
+      const prompt3 = new MyPrompt(promptVis, promptFunc, async () => false)
+      const prompt1Node = new PromptNode(prompt1)
+      const prompt2Node = new PromptNode(prompt2)
+      const prompt3Node = new PromptNode(prompt3)
+      const runner = new PromptRunner({})
+      expect(runner.getFirstNode([
+        prompt1Node,
+        prompt2Node,
+        prompt3Node
+      ])).resolves.toEqual(prompt2Node)
+    })
+  })
+  describe('runArray', () => {
+    it('calls run on the matched first matching node', async () => {
+      const channel = {
+        foo: 'asd'
+      } as unknown as ChannelInterface
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const prompt3Node = new PromptNode(prompt3)
+      const runner = new PromptRunner({})
+      jest.spyOn(runner, 'getFirstNode')
+        .mockResolvedValue(prompt3Node)
+      const run = jest.spyOn(runner, 'run')
+        .mockResolvedValue({})
+      await runner.runArray([], channel)
+      expect(run).toHaveBeenCalledWith(prompt3Node, channel)
+    })
+    it('return the result of this.run if matched node', async () => {
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const prompt3Node = new PromptNode(prompt3)
+      const runner = new PromptRunner({})
+      jest.spyOn(runner, 'getFirstNode')
+        .mockResolvedValue(prompt3Node)
+      const runReturnValue = {
+        foo: 'bbbb'
+      }
+      jest.spyOn(runner, 'run')
+        .mockResolvedValue(runReturnValue)
+      await expect(runner.runArray([], {} as ChannelInterface))
+        .resolves.toEqual(runReturnValue)
+    })
+    it('return the runner initial data if no node condition passes', async () => {
+      const initialData = {
+        sfdgdfrh: 'asgrfth'
+      }
+      const runner = new PromptRunner({})
+      runner.initialData = initialData
+      jest.spyOn(runner, 'getFirstNode')
+        .mockResolvedValue(null)
+      await expect(runner.runArray([], {} as ChannelInterface))
+        .resolves.toEqual(initialData)
     })
   })
 })

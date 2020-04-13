@@ -186,6 +186,20 @@ const lastPromptData: MyData = await runner.run(askNameNode, channel)
 // lastPromptData is the data returned from either englishAsk or spanishAsk
 ```
 
+You can also run an array of prompt nodes. In this case, all prompt nodes must have a condition specified.
+
+```ts
+const runner = new PromptRunner<MyData>({})
+
+// runArray resolves with the data returned from the last prompt
+const channel: ChannelInterface = myImplementedChannel()
+const lastPromptData: MyData = await runner.runArray([
+  askSurnameNode, // Must have a condition function specified
+  askNameNode // Must have a condition function specified
+], channel)
+// (askSurname OR askName) -> askAge -> askLocation -> (englishAsk OR spanishAsk)
+```
+
 ## Testing
 
 Unit testing is straightforward since the tree of responses is built up from individual, isolated prompts represented by functions that can be exported for testing.

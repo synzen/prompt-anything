@@ -182,6 +182,45 @@ describe('Int::PromptRunner', () => {
       expect(spy).not.toHaveBeenCalled()
     })
   })
+  describe('runArray', () => {
+    it('works with the first matching node', async () => {
+      const channel = createMockChannel()
+      // Prompts
+      const prompt1 = new MyPrompt(promptForm, promptFunc, async () => false)
+      const prompt2 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const prompt3 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const prompt4 = new MyPrompt(promptForm, promptFunc, async () => false)
+      const prompt5 = new MyPrompt(promptForm, promptFunc, async () => true)
+      // Nodes
+      const node1 = new PromptNode(prompt1)
+      const node2 = new PromptNode(prompt2)
+      const node3 = new PromptNode(prompt3)
+      const node4 = new PromptNode(prompt4)
+      const node5 = new PromptNode(prompt5)
+      // Set node children
+      const entry = [node1, node2]
+      node2.children = [node3]
+      node3.children = [node4, node5]
+      node4.children = []
+      node5.children = []
+
+      const runner = new PromptRunner<{}>({})
+      const promise = runner.runArray(entry, channel)
+      await flushPromises()
+      emitter.emit('message', createMockMessage())
+      await flushPromises()
+      expect(runner.indexOf(prompt1)).toEqual(-1)
+      expect(runner.indexOf(prompt2)).toEqual(0)
+      emitter.emit('message', createMockMessage())
+      await flushPromises()
+      expect(runner.indexOf(prompt3)).toEqual(1)
+      emitter.emit('message', createMockMessage())
+      await flushPromises()
+      await promise
+      expect(runner.indexOf(prompt4)).toEqual(-1)
+      expect(runner.indexOf(prompt5)).toEqual(2)
+    })
+  })
   describe('run', () => {
     it('works with prompt collect and getNext', async () => {
       const channel = createMockChannel()

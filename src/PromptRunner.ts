@@ -52,12 +52,31 @@ export class PromptRunner<DataType> {
   }
 
   /**
-   * Validate the prompt and all its children before executing
+   * Get the first node whose condition passes, given this
+   * runner's initial data
    * 
-   * @param prompt Root prompt
-   * @param channel Channel
-   * @param initialData Data for the root prompt
-   * @param triggerMessage Message that triggered this prompt
+   * @param nodes Array of prompt nodes
+   */
+  async getFirstNode (nodes: Array<PromptNode<DataType>>): Promise<PromptNode<DataType>|null> {
+    for (let i = 0; i < nodes.length; ++i) {
+      const node = nodes[i]
+      const condition = node.prompt.condition
+      if (!condition) {
+        throw new Error(`Invalid node at index ${i}. Array of prompt nodes requires all prompts to have condition functions specified to find a condition that passes.`)
+      }
+      if (await condition(this.initialData)) {
+        return node
+      }
+    }
+    return null
+  }
+
+  /**
+   * Validate the node prompt and all its children before
+   * executing
+   * 
+   * @param rootNode Root prompt node
+   * @param channel Channel to run the prompt in
    */
   async run (rootNode: PromptNode<DataType>, channel: ChannelInterface): Promise<DataType> {
     if (!PromptRunner.valid(rootNode)) {
@@ -66,12 +85,28 @@ export class PromptRunner<DataType> {
     return this.execute(rootNode, channel)
   }
 
+  
   /**
-   * Execute the prompt without validating
+   * Get the first node whose condition passes, and run
+   * it
    * 
-   * @param prompt Root prompt
+   * @param rootNode Root prompt node
+   * @param channel Channel to run the root prompt node
+   */
+  async runArray (rootNode: Array<PromptNode<DataType>>, channel: ChannelInterface): Promise<DataType> {
+    const matched = await this.getFirstNode(rootNode)
+      if (matched) {
+        return this.run(matched, channel)
+      } else {
+        return this.initialData
+      }
+  }
+
+  /**
+   * Run the PromptNode without validating
+   * 
+   * @param PromptNode Root prompt node
    * @param channel Channel
-   * @param initialData Data for the root prompt
    */
   async execute (rootNode: PromptNode<DataType>, channel: ChannelInterface): Promise<DataType> {
     let thisNode: PromptNode<DataType>|null = rootNode
