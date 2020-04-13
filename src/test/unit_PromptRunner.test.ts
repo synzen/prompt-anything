@@ -328,14 +328,14 @@ describe('Unit::PromptRunner', () => {
     })
   })
   describe('getFirstNode', () => {
-    it('throws an error if there is a prompt with no condition', async () => {
+    it('returns the first prompt whose condition passes', async () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
       Object.defineProperty(prompt1, 'condition', {
         value: async () => false
       })
       const prompt2 = new MyPrompt(promptVis, promptFunc)
       Object.defineProperty(prompt2, 'condition', {
-        value: undefined
+        value: async () => true
       })
       const prompt3 = new MyPrompt(promptVis, promptFunc)
       Object.defineProperty(prompt3, 'condition', {
@@ -352,7 +352,33 @@ describe('Unit::PromptRunner', () => {
         prompt1Node,
         prompt2Node,
         prompt3Node
-      ])).rejects.toThrow('Invalid node at index 1. Array of prompt nodes requires all prompts to have condition functions specified to find a condition that passes.')
+      ])).resolves.toEqual(prompt2Node)
+    })
+    it('returns the first prompt with no', async () => {
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt1, 'condition', {
+        value: async () => false
+      })
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt2, 'condition', {
+        value: async () => false
+      })
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      Object.defineProperty(prompt3, 'condition', {
+        value: undefined
+      })
+      const prompt1Node = new PromptNode(prompt1)
+      prompt1Node.prompt = prompt1
+      const prompt2Node = new PromptNode(prompt2)
+      prompt2Node.prompt = prompt2
+      const prompt3Node = new PromptNode(prompt3)
+      prompt3Node.prompt = prompt3
+      const runner = new PromptRunner({})
+      await expect(runner.getFirstNode([
+        prompt1Node,
+        prompt2Node,
+        prompt3Node
+      ])).resolves.toEqual(prompt3Node)
     })
     it('returns the first node with a passing condition', () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc, async () => false)

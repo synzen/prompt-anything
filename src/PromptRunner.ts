@@ -61,10 +61,7 @@ export class PromptRunner<DataType> {
     for (let i = 0; i < nodes.length; ++i) {
       const node = nodes[i]
       const condition = node.prompt.condition
-      if (!condition) {
-        throw new Error(`Invalid node at index ${i}. Array of prompt nodes requires all prompts to have condition functions specified to find a condition that passes.`)
-      }
-      if (await condition(this.initialData)) {
+      if (!condition || await condition(this.initialData)) {
         return node
       }
     }

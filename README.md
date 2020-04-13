@@ -186,7 +186,7 @@ const lastPromptData: MyData = await runner.run(askNameNode, channel)
 // lastPromptData is the data returned from either englishAsk or spanishAsk
 ```
 
-You can also run an array of prompt nodes. In this case, all prompt nodes must have a condition specified.
+You can also run an array of prompt nodes. The first node that either has no condition, or has a matching condition will be passd to the `run` method.
 
 ```ts
 const runner = new PromptRunner<MyData>({})
@@ -194,8 +194,8 @@ const runner = new PromptRunner<MyData>({})
 // runArray resolves with the data returned from the last prompt
 const channel: ChannelInterface = myImplementedChannel()
 const lastPromptData: MyData = await runner.runArray([
-  askSurnameNode, // Must have a condition function specified
-  askNameNode // Must have a condition function specified
+  askSurnameNode,
+  askNameNode
 ], channel)
 // (askSurname OR askName) -> askAge -> askLocation -> (englishAsk OR spanishAsk)
 ```
