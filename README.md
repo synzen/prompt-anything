@@ -11,6 +11,7 @@ A modular and customizable framework to build prompts of any kind (such as ones 
   - [Creating a Prompt](#creating-a-prompt)
     - [Conditional Prompts](#conditional-prompts)
     - [Conditional Visuals](#conditional-visuals)
+    - [Rejecting Input](#rejecting-input)
     - [Skipping Message Collection](#skipping-message-collection)
   - [Connecting Prompts](#connecting-prompts)
   - [Running Prompts](#running-prompts)
