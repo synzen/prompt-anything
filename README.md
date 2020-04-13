@@ -62,12 +62,22 @@ class MyPrompt<DataType> extends Prompt<DataType> {
 See the `examples/console.ts` for a functioning implementation that accepts input from the console.
 
 ### Creating a Prompt
+A prompt is composed of three parts:
+
+1. `VisualInterface|VisualGenerator` - A object or function that determines how the prompt looks like to the user
+2. `PromptFunction` - An (ideally [pure](https://en.wikipedia.org/wiki/Pure_function)) function that runs on every input from your collector
+3. `PromptCondition` - A function to determine if it should run
+
 ```ts
 // Data type that is passed to each prompt
 type MyData = {
   human?: boolean;
   name?: string;
   age?: number;
+}
+
+const askNameVisual: VisualInterface = {
+  text: 'What is your name?'
 }
 
 // askNameFn is run on every message collected during this prompt. This should be a pure function. (see below for details)
@@ -78,9 +88,8 @@ const askNameFn: PromptFunction<MyData> = async (m: MessageInterface, data: MyDa
     name: m.content
   }
 }
-const askNamePrompt = new MyPrompt<MyData>({
-  text: 'What is your name?'
-}, askNameFn)
+// Third argument is the optional PromptCondition
+const askNamePrompt = new MyPrompt<MyData>(askNameVisual, askNameFn)
 ```
 The `PromptFunction` should be [pure function](https://en.wikipedia.org/wiki/Pure_function) to 
 
@@ -202,7 +211,7 @@ const lastPromptData: MyData = await runner.runArray([
 
 ## Testing
 
-Unit testing is straightforward since the tree of responses is built up from individual, isolated prompts represented by functions that can be exported for testing.
+Unit testing is straightforward since the tree of responses is built up from individual prompts that can be exported for testing. The prompts can be further decomposed into their visual, functional and conditional parts for even more granular tests.
 
 Integration testing can be asserted on the execution order of the phases. Unfortunately, a "flush promises" method must be used since we cannot normally `await` the promises while we are waiting for messages from `EventEmitter`, otherwise the promise would never resolve until the series of prompts has ended.
 
@@ -284,7 +293,6 @@ it('runs correctly for age <= 20', () => {
   await flushPromises()
   // Assert askName ran first
   expect(runner.indexOf(askName)).toEqual(0)
-  await flushPromises()
   // Accept the age
   emitter.emit('message', createMockMessage(age))
   await flushPromises()
