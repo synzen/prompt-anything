@@ -15,6 +15,7 @@ A modular and customizable framework to build prompts of any kind (such as ones 
     - [Skipping Message Collection](#skipping-message-collection)
   - [Connecting Prompts](#connecting-prompts)
   - [Running Prompts](#running-prompts)
+- [Testing](#testing)
 
 ## Implementation
 
@@ -189,9 +190,8 @@ const lastPromptData: MyData = await runner.run(askNameNode, channel)
 
 Unit testing is straightforward since the tree of responses is built up from individual, isolated prompts represented by functions that can be exported for testing.
 
-If the data is an object, prompt functions should be pure since each prompt should ideally depend on the exact object given by the previous prompt (unmodified by the current one).
-
 Integration testing can be asserted on the execution order of the phases. Unfortunately, a "flush promises" method must be used since we cannot normally `await` the promises while we are waiting for messages from `EventEmitter`, otherwise the promise would never resolve until the series of prompts has ended.
+
 ```ts
 async function flushPromises(): Promise<void> {
   return new Promise(setImmediate);
