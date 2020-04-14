@@ -1,6 +1,6 @@
 import { VisualInterface } from "./Visual";
 import { MessageInterface } from "./Message";
 
-export interface ChannelInterface {
-  send: (format: VisualInterface) => Promise<MessageInterface>;
+export interface ChannelInterface<MessageType extends MessageInterface> {
+  send: (format: VisualInterface) => Promise<MessageType>;
 }

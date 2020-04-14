@@ -1,10 +1,11 @@
 import { Prompt } from "./Prompt"
 import { TreeNode } from "./TreeNode"
+import { MessageInterface } from "./interfaces/Message"
 
-export class PromptNode<DataType> extends TreeNode<PromptNode<DataType>> {
-  prompt: Prompt<DataType>
+export class PromptNode<DataType, MessageType extends MessageInterface> extends TreeNode<PromptNode<DataType, MessageType>> {
+  prompt: Prompt<DataType, MessageType>
 
-  constructor (prompt: Prompt<DataType>) {
+  constructor (prompt: Prompt<DataType, MessageType>) {
     super()
     this.prompt = prompt
   }
@@ -33,7 +34,7 @@ export class PromptNode<DataType> extends TreeNode<PromptNode<DataType>> {
    * 
    * @param data The data before this prompt
    */
-  async getNext (data: DataType): Promise<PromptNode<DataType>|null> {
+  async getNext (data: DataType): Promise<PromptNode<DataType, MessageType>|null> {
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
@@ -50,7 +51,7 @@ export class PromptNode<DataType> extends TreeNode<PromptNode<DataType>> {
    * 
    * @param nodes
    */
-  setChildren (nodes: Array<PromptNode<DataType>>): this {
+  setChildren (nodes: Array<PromptNode<DataType, MessageType>>): this {
     this.children = nodes
     return this
   }
@@ -60,7 +61,7 @@ export class PromptNode<DataType> extends TreeNode<PromptNode<DataType>> {
    * 
    * @param node
    */
-  addChild (node: PromptNode<DataType>): this {
+  addChild (node: PromptNode<DataType, MessageType>): this {
     this.children.push(node)
     return this
   }

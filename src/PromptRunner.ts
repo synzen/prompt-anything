@@ -1,10 +1,11 @@
 import { Prompt } from './Prompt'
 import { PromptNode } from './PromptNode'
 import { ChannelInterface } from './interfaces/Channel'
+import { MessageInterface } from './interfaces/Message'
 
-export class PromptRunner<DataType> {
+export class PromptRunner<DataType, MessageType extends MessageInterface> {
   initialData: DataType
-  readonly ran: Array<Prompt<DataType>> = []
+  readonly ran: Array<Prompt<DataType, MessageType>> = []
   
   constructor (initialData: DataType) {
     this.initialData = initialData
@@ -17,7 +18,7 @@ export class PromptRunner<DataType> {
    * 
    * @param prompt Root prompt
    */
-  static valid<DataType> (prompt: PromptNode<DataType>): boolean {
+  static valid<DataType, MessageType extends MessageInterface> (prompt: PromptNode<DataType, MessageType>): boolean {
     if (!prompt.hasValidChildren()) {
       return false
     }
@@ -36,7 +37,7 @@ export class PromptRunner<DataType> {
    * 
    * @param prompt 
    */
-  indexOf (prompt: Prompt<DataType>): number {
+  indexOf (prompt: Prompt<DataType, MessageType>): number {
     return this.ran.indexOf(prompt)
   }
 
@@ -47,7 +48,7 @@ export class PromptRunner<DataType> {
    * @param prompts Prompts to check index of
    * @returns {Array<number>} Array of indices
    */
-  indexesOf (prompts: Array<Prompt<DataType>>): Array<number> {
+  indexesOf (prompts: Array<Prompt<DataType, MessageType>>): Array<number> {
     return prompts.map(prompt => this.indexOf(prompt))
   }
 
@@ -57,7 +58,7 @@ export class PromptRunner<DataType> {
    * 
    * @param nodes Array of prompt nodes
    */
-  async getFirstNode (nodes: Array<PromptNode<DataType>>): Promise<PromptNode<DataType>|null> {
+  async getFirstNode (nodes: Array<PromptNode<DataType, MessageType>>): Promise<PromptNode<DataType, MessageType>|null> {
     for (let i = 0; i < nodes.length; ++i) {
       const node = nodes[i]
       const condition = node.prompt.condition
@@ -75,7 +76,7 @@ export class PromptRunner<DataType> {
    * @param rootNode Root prompt node
    * @param channel Channel to run the prompt in
    */
-  async run (rootNode: PromptNode<DataType>, channel: ChannelInterface): Promise<DataType> {
+  async run (rootNode: PromptNode<DataType, MessageType>, channel: ChannelInterface<MessageType>): Promise<DataType> {
     if (!PromptRunner.valid(rootNode)) {
       throw new Error('Invalid rootNode found. Nodes with more than 1 child must have all its children have a condition function specified.')
     }
@@ -90,7 +91,7 @@ export class PromptRunner<DataType> {
    * @param rootNode Root prompt node
    * @param channel Channel to run the root prompt node
    */
-  async runArray (rootNode: Array<PromptNode<DataType>>, channel: ChannelInterface): Promise<DataType> {
+  async runArray (rootNode: Array<PromptNode<DataType, MessageType>>, channel: ChannelInterface<MessageType>): Promise<DataType> {
     const matched = await this.getFirstNode(rootNode)
       if (matched) {
         return this.run(matched, channel)
@@ -105,11 +106,11 @@ export class PromptRunner<DataType> {
    * @param PromptNode Root prompt node
    * @param channel Channel
    */
-  async execute (rootNode: PromptNode<DataType>, channel: ChannelInterface): Promise<DataType> {
-    let thisNode: PromptNode<DataType>|null = rootNode
+  async execute (rootNode: PromptNode<DataType, MessageType>, channel: ChannelInterface<MessageType>): Promise<DataType> {
+    let thisNode: PromptNode<DataType, MessageType>|null = rootNode
     let thisData = this.initialData
     while (thisNode) {
-      const thisPrompt: Prompt<DataType> = thisNode.prompt
+      const thisPrompt: Prompt<DataType, MessageType> = thisNode.prompt
       await thisNode.prompt.sendUserVisual(channel, thisData)
       const { data, terminate } = await thisPrompt.collect(channel, thisData)
       this.ran.push(thisNode.prompt)

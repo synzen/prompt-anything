@@ -5,9 +5,9 @@ import { MessageInterface } from './interfaces/Message';
 import { VisualInterface } from './interfaces/Visual';
 import { ChannelInterface } from './interfaces/Channel';
 
-export type PromptFunction<DataType> = (this: Prompt<DataType>, m: MessageInterface, data: DataType) => Promise<DataType>
+export type PromptFunction<DataType, MessageType extends MessageInterface> = (m: MessageType, data: DataType) => Promise<DataType>
 
-export interface PromptCollector<DataType> extends EventEmitter {
+export interface PromptCollector<DataType, MessageType extends MessageInterface> extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
   emit(event: 'accept', message: MessageInterface, data: DataType): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
@@ -33,14 +33,14 @@ export type StoredMessage = {
   fromUser: boolean;
 }
 
-export abstract class Prompt<DataType> {
+export abstract class Prompt<DataType, MessageType extends MessageInterface> {
   /**
    * Create a collector that is part of a prompt
    * 
    * @param channel Channel to create the collector in
    * @param data Prompt data
    */
-  abstract createCollector(channel: ChannelInterface, data: DataType): PromptCollector<DataType>;
+  abstract createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType, MessageType>;
 
   /**
    * When a message is rejected, this function is additionally called
@@ -50,14 +50,14 @@ export abstract class Prompt<DataType> {
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface, data: DataType): Promise<void>;
+  abstract onReject(message: MessageType, error: Rejection, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
 
   /**
    * When the collector expires, call this function
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onInactivity(channel: ChannelInterface, data: DataType): Promise<void>;
+  abstract onInactivity(channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
 
   /**
    * When a message specifies it wants to exit the prompt,
@@ -67,15 +67,15 @@ export abstract class Prompt<DataType> {
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onExit(message: MessageInterface, channel: ChannelInterface, data: DataType): Promise<void>;
+  abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
   visualGenerator: VisualGenerator<DataType>|VisualInterface
-  collector?: PromptCollector<DataType>
+  collector?: PromptCollector<DataType, MessageType>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
-  readonly function?: PromptFunction<DataType>
+  readonly function?: PromptFunction<DataType, MessageType>
   readonly condition?: PromptCondition<DataType>
 
-  constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType>, condition?: PromptCondition<DataType>, duration = 0) {
+  constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType, MessageType>, condition?: PromptCondition<DataType>, duration = 0) {
     this.visualGenerator = visualGenerator
     this.duration = duration
     this.function = f
@@ -103,7 +103,7 @@ export abstract class Prompt<DataType> {
    * @param data Prompt data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<DataType> (emitter: PromptCollector<DataType>, func: PromptFunction<DataType>, data?: DataType, duration?: number): void {
+  static handleCollector<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, func: PromptFunction<DataType, MessageType>, data?: DataType, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -128,7 +128,7 @@ export abstract class Prompt<DataType> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<DataType> (emitter: PromptCollector<DataType>, message: MessageInterface, func: PromptFunction<DataType>, data?: DataType): Promise<void> {
+  static async handleMessage<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, message: MessageInterface, func: PromptFunction<DataType, MessageType>, data?: DataType): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
@@ -150,7 +150,7 @@ export abstract class Prompt<DataType> {
    * @param visual The visual for channel.send to send
    * @param channel Channel to send the message to
    */
-  async sendVisual (visual: VisualInterface, channel: ChannelInterface): Promise<MessageInterface> {
+  async sendVisual (visual: VisualInterface, channel: ChannelInterface<MessageType>): Promise<MessageType> {
     const sent = await channel.send(visual)
     this.storeBotMessage(sent)
     return sent
@@ -162,7 +162,7 @@ export abstract class Prompt<DataType> {
    * @param message The MessageInterface before this prompt
    * @param data Data to generate the user's message
    */
-  async sendUserVisual (channel: ChannelInterface, data: DataType): Promise<MessageInterface> {
+  async sendUserVisual (channel: ChannelInterface<MessageType>, data: DataType): Promise<MessageInterface> {
     return this.sendVisual(this.getVisual(data), channel)
   }
 
@@ -197,7 +197,7 @@ export abstract class Prompt<DataType> {
    * @param channel The channel to collect from
    * @param data The data before this prompt
    */
-  collect (channel: ChannelInterface, data: DataType): Promise<PromptResult<DataType>> {
+  collect (channel: ChannelInterface<MessageType>, data: DataType): Promise<PromptResult<DataType>> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
         resolve(new PromptResult(data))
@@ -205,7 +205,7 @@ export abstract class Prompt<DataType> {
       }
       this.collector = this.createCollector(channel, data)
       const collector = this.collector
-      Prompt.handleCollector(collector, this.function.bind(this), data, this.duration)
+      Prompt.handleCollector(collector, this.function, data, this.duration)
 
       const handleInternalError = (error: Error): boolean => collector.emit('error', error)
       // Internally handled events
@@ -228,13 +228,13 @@ export abstract class Prompt<DataType> {
       collector.once('exit', (exitMessage: MessageInterface) => {
         this.storeUserMessage(exitMessage)
         collector.emit('stop')
-        this.onExit(exitMessage, channel, data)
+        this.onExit(exitMessage as MessageType, channel, data)
           .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
         this.storeUserMessage(userInput)
-        this.onReject(userInput, err, channel, data)
+        this.onReject(userInput as MessageType, err, channel, data)
           .catch(handleInternalError)
       })
     })
