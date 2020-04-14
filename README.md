@@ -183,9 +183,10 @@ The order of the children matters. The first child that matches its condition ba
 
 ### Running Prompts
 
-After your prompt nodes are created, pass the root node into a `PromptRunner`.
+After your prompt nodes are created, create a `PromptRunner` that is initialized with the data you'll be passing to the first prompt, then call its run method with the first prompt node.
 
 ```ts
+// The initial data that is given to the first prompt is passed to the PromptRunner's constructor
 const runner = new PromptRunner<MyData>({})
 
 // run resolves with the data returned from the last prompt
