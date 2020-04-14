@@ -1,10 +1,11 @@
 import { PromptNode } from "../PromptNode"
 import { Prompt } from "../Prompt"
 import { EventEmitter } from "events"
+import { MessageInterface } from "../interfaces/Message"
 
 jest.mock('../Prompt')
 
-class MyPrompt extends Prompt<{}> {
+class MyPrompt extends Prompt<{}, MessageInterface> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.")
   }

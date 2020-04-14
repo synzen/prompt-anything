@@ -3,11 +3,12 @@ import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { PromptNode } from "../PromptNode"
 import { ChannelInterface } from "../interfaces/Channel"
+import { MessageInterface } from "../interfaces/Message"
 
 jest.mock('../Prompt')
 jest.mock('../PromptNode')
 
-class MyPrompt extends Prompt<{}> {
+class MyPrompt extends Prompt<{}, MessageInterface> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.")
   }
@@ -37,7 +38,7 @@ describe('Unit::PromptRunner', () => {
       title: '1'
     }
   })
-  const promptFunc: PromptFunction<{}> = async () => ({})
+  const promptFunc: PromptFunction<{}, MessageInterface> = async () => ({})
   afterEach(() => {
     jest.restoreAllMocks()
   })
@@ -49,7 +50,7 @@ describe('Unit::PromptRunner', () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
       const node = new PromptNode(prompt)
       node.prompt = prompt
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await expect(runner.run(node, channel))
         .rejects
         .toThrow('Invalid rootNode found. Nodes with more than 1 child must have all its children have a condition function specified.')
@@ -60,7 +61,7 @@ describe('Unit::PromptRunner', () => {
       const channel = createMockChannel()
       const prompt = new MyPrompt(promptVis, promptFunc)
       const node = new PromptNode(prompt)
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       const executeReturnValue = {
         foo: 'bar'
       }
@@ -147,7 +148,7 @@ describe('Unit::PromptRunner', () => {
       const initialData = {
         a: 0
       }
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       runner.initialData = initialData
       await runner.execute(node1, channel)
       expect(sendUserVisualSpies[0]).toHaveBeenCalledWith(
@@ -187,7 +188,7 @@ describe('Unit::PromptRunner', () => {
           terminate: false
         })
       })
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node1, channel)
       for (const spy of collectSpies) {
         expect(spy).toHaveBeenCalledTimes(1)
@@ -217,7 +218,7 @@ describe('Unit::PromptRunner', () => {
           terminate: false
         })
       })
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node1, channel)
       expect(runner.ran[0]).toEqual(prompt1)
       expect(runner.ran[1]).toEqual(prompt2)
@@ -258,7 +259,7 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(null)
       jest.spyOn(prompt3, 'collect')
         .mockResolvedValue(prompt3Returned)
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       const returned = await runner.execute(node1, channel)
       expect(returned).toEqual(prompt3Returned.data)
     })
@@ -291,7 +292,7 @@ describe('Unit::PromptRunner', () => {
         data: {},
         terminate: true
       })
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node1, channel)
       expect(prompt3Collect).not.toHaveBeenCalled()
     })
@@ -301,7 +302,7 @@ describe('Unit::PromptRunner', () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
       const prompt2 = new MyPrompt(promptVis, promptFunc)
       const prompt3 = new MyPrompt(promptVis, promptFunc)
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       Object.defineProperty(runner, 'ran', {
         value: [prompt2, prompt3, prompt1]
       })
@@ -319,7 +320,7 @@ describe('Unit::PromptRunner', () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
       const prompt2 = new MyPrompt(promptVis, promptFunc)
       const prompt3 = new MyPrompt(promptVis, promptFunc)
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       Object.defineProperty(runner, 'ran', {
         value: [prompt2, prompt3, prompt1]
       })
@@ -430,7 +431,7 @@ describe('Unit::PromptRunner', () => {
     it('calls run on the matched first matching node', async () => {
       const channel = {
         foo: 'asd'
-      } as unknown as ChannelInterface
+      } as unknown as ChannelInterface<MessageInterface>
       const prompt3 = new MyPrompt(promptVis, promptFunc)
       const prompt3Node = new PromptNode(prompt3)
       const runner = new PromptRunner({})
@@ -452,7 +453,7 @@ describe('Unit::PromptRunner', () => {
       }
       jest.spyOn(runner, 'run')
         .mockResolvedValue(runReturnValue)
-      await expect(runner.runArray([], {} as ChannelInterface))
+      await expect(runner.runArray([], {} as ChannelInterface<MessageInterface>))
         .resolves.toEqual(runReturnValue)
     })
     it('return the runner initial data if no node condition passes', async () => {
@@ -463,7 +464,7 @@ describe('Unit::PromptRunner', () => {
       runner.initialData = initialData
       jest.spyOn(runner, 'getFirstNode')
         .mockResolvedValue(null)
-      await expect(runner.runArray([], {} as ChannelInterface))
+      await expect(runner.runArray([], {} as ChannelInterface<MessageInterface>))
         .resolves.toEqual(initialData)
     })
   })

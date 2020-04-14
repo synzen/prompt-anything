@@ -3,6 +3,7 @@ import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
 import { PromptNode } from "../PromptNode";
+import { MessageInterface } from "../interfaces/Message";
 
 async function flushPromises(): Promise<void> {
   return new Promise(resolve => {
@@ -32,9 +33,9 @@ const promptForm: VisualGenerator<{}> = () => ({
     title: '1'
   }
 })
-const promptFunc: PromptFunction<{}> = async () => ({})
+const promptFunc: PromptFunction<{}, MessageInterface> = async () => ({})
 
-class MyPrompt<DataType> extends Prompt<DataType> {
+class MyPrompt<DataType> extends Prompt<DataType, MessageInterface> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -148,7 +149,7 @@ describe('Int::PromptRunner', () => {
       nodeRC2.children = [nodeRC11]
       // Either of these should not collect since they have no children
       nodeRC11.children = [nodeRC111, nodeRC112]
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(nodeR, channel)
       expect(spies[0]).toHaveBeenCalledTimes(1)
       expect(spies[1]).not.toHaveBeenCalled()
@@ -168,7 +169,7 @@ describe('Int::PromptRunner', () => {
         data: {},
         terminate: false
       })
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node, channel)
       expect(spy).toHaveBeenCalledTimes(1)
     })
@@ -177,7 +178,7 @@ describe('Int::PromptRunner', () => {
       const prompt = new MyPrompt(promptForm)
       const node = new PromptNode(prompt)
       const spy = jest.spyOn(prompt, 'createCollector')
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node, channel)
       expect(spy).not.toHaveBeenCalled()
     })
@@ -204,7 +205,7 @@ describe('Int::PromptRunner', () => {
       node4.children = []
       node5.children = []
 
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       const promise = runner.runArray(entry, channel)
       await flushPromises()
       emitter.emit('message', createMockMessage())
@@ -238,7 +239,7 @@ describe('Int::PromptRunner', () => {
       nodeC2.children = [nodeC21]
       nodeC21.children = []
 
-      const runner = new PromptRunner<{}>({})
+      const runner = new PromptRunner<{}, MessageInterface>({})
       const promise = runner.run(node, channel)
       await flushPromises()
       emitter.emit('message', createMockMessage())
@@ -263,7 +264,7 @@ describe('Int::PromptRunner', () => {
           title: '1'
         }
       })
-      const askNameFn: PromptFunction<PromptData> = async (m, data) => {
+      const askNameFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -272,7 +273,7 @@ describe('Int::PromptRunner', () => {
       }
       
       // Ask age prompt that collects messages
-      const askAgeFn: PromptFunction<PromptData> = async (m, data) => {
+      const askAgeFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
         if (!data) {
           throw new Error('Missing data')
         }
@@ -305,7 +306,7 @@ describe('Int::PromptRunner', () => {
       const name = 'George'
       const age = '30'
       
-      const runner = new PromptRunner<PromptData>({})
+      const runner = new PromptRunner<PromptData, MessageInterface>({})
       const promise = runner.run(askNameNode, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()
@@ -335,7 +336,7 @@ describe('Int::PromptRunner', () => {
         }
       })
       const askNameFnSpy = jest.fn()
-      const askNameFn: PromptFunction<PromptData> = async (m, data) => {
+      const askNameFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
         askNameFnSpy()
         if (!data) {
           throw new Error('Missing data')
@@ -347,7 +348,7 @@ describe('Int::PromptRunner', () => {
       
       // Ask age prompt that collects messages
       const askAgeFnSpy = jest.fn()
-      const askAgeFn: PromptFunction<PromptData> = async (m, data) => {
+      const askAgeFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
         askAgeFnSpy()
         if (!data) {
           throw new Error('Missing data')
@@ -382,7 +383,7 @@ describe('Int::PromptRunner', () => {
       const channel = createMockChannel()
       const name = 'George'
       const age = '30'
-      const runner = new PromptRunner<PromptData>({})
+      const runner = new PromptRunner<PromptData, MessageInterface>({})
       const promise = runner.run(askNameNode, channel)
       // Wait for all pending promise callbacks to be executed for the emitter to set up
       await flushPromises()

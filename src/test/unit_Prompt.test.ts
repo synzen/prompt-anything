@@ -1,8 +1,9 @@
 import { Prompt } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
+import { MessageInterface } from "../interfaces/Message";
 
-class MyPrompt<DataType> extends Prompt<DataType> {
+class MyPrompt<DataType> extends Prompt<DataType, MessageInterface> {
   onReject(): Promise<void> {
     throw new Error("Method not implemented.");
   }
@@ -271,7 +272,7 @@ describe('Unit::Prompt', () => {
   })
   describe('collect', () => {
     let emitter: EventEmitter
-    let prompt: Prompt<object>
+    let prompt: Prompt<object, MessageInterface>
     let channel: MockChannel
     beforeEach(() => {
       emitter = new EventEmitter()
