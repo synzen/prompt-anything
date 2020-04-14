@@ -14,6 +14,7 @@ A modular and customizable framework to build prompts of any kind (such as ones 
     - [Conditional Visuals](#conditional-visuals)
     - [Rejecting Input](#rejecting-input)
     - [Skipping Message Collection](#skipping-message-collection)
+    - [Time Limits](#time-limits)
   - [Connecting Prompts](#connecting-prompts)
   - [Running Prompts](#running-prompts)
 - [Testing](#testing)
@@ -30,17 +31,17 @@ interface MessageInterface {
   content: string;
 }
 
-interface ChannelInterface {
-  send: (visual: VisualInterface) => Promise<MessageInterface>;
+interface ChannelInterface<MessageType extends MessageInterface> {
+  send: (visual: VisualInterface) => Promise<MessageType>;
 }
 ```
 The `Prompt` method must be extended to implement the abstract methods `createCollector`, `onReject`, `onInactivity` and `onExit`. `createCollector` should returns an event emitter that should also emit `message` whenever your collector gets a message. Your collector should stop when the emitter emits `stop`.
 ```ts
-class MyPrompt<DataType> extends Prompt<DataType> {
-  createCollector(channel: ChannelInterface, data: DataType): PromptCollector<DataType> {
-    const emitter = new EventEmitter()
+class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
+  createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType, MessageType> {
+    const emitter: PromptCollector<DataType, MessageType> = new EventEmitter()
     // Collect your messages via your listeners, and return an emitter that follows these rules
-    myCollector.on('myMessage', (message: MessageInterface) => {
+    myCollector.on('myMessage', (message: MessageType) => {
       // Emit the messages from your collector here
       emitter.emit('message', message)
     })
@@ -52,9 +53,9 @@ class MyPrompt<DataType> extends Prompt<DataType> {
   }
   
   // Implement abstract methods. These events are automatically called
-  abstract async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface): Promise<void>;
-  abstract async onInactivity(channel: ChannelInterface): Promise<void>;
-  abstract async onExit(message: MessageInterface, channel: ChannelInterface): Promise<void>;
+  abstract async onReject(message: MessageType, error: Rejection, channel: ChannelInterface<MessageType>): Promise<void>;
+  abstract async onInactivity(channel: ChannelInterface<MessageType>): Promise<void>;
+  abstract async onExit(message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
 }
 ```
 
@@ -82,7 +83,7 @@ const askNameVisual: VisualInterface = {
 }
 
 // askNameFn is run on every message collected during this prompt. This should be a pure function. (see below for details)
-const askNameFn: PromptFunction<MyData> = async (m: MessageInterface, data: MyData) => {
+const askNameFn: PromptFunction<MyData, MessageType> = async (m: MessageType, data: MyData) => {
   // This data is returned to the next prompt
   return {
     ...data,
@@ -90,7 +91,7 @@ const askNameFn: PromptFunction<MyData> = async (m: MessageInterface, data: MyDa
   }
 }
 // Third argument is the optional PromptCondition
-const askNamePrompt = new MyPrompt<MyData>(askNameVisual, askNameFn)
+const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn)
 ```
 The `PromptFunction` should be [pure function](https://en.wikipedia.org/wiki/Pure_function) to 
 
@@ -112,7 +113,7 @@ const askNameCondition = (data: MyData) => {
     return true
   }
 }
-const askNamePrompt = new MyPrompt<MyData>({
+const askNamePrompt = new MyPrompt<MyData, MessageType>({
   text: 'What is your name?'
 }, askNameFn, askNameCondition)
 ```
@@ -122,7 +123,7 @@ const askNamePrompt = new MyPrompt<MyData>({
 If you want a prompt's visual to be dependent on the given data, you can pass a function as the argument of a `Prompt` instead of an object.
 
 ```ts
-const askNamePrompt = new MyPrompt<MyData>((data: MyData): VisualInterface => ({
+const askNamePrompt = new MyPrompt<MyData, MessageType>((data: MyData): VisualInterface => ({
   text: `Hello ${data.human ? 'non-human' : 'human'}! What is your name?`
 }), askNameFn)
 ```
@@ -136,7 +137,7 @@ To reject input, you can check the the content of the message in `PromptFunction
 3. Run the prompt function again
 
 ```ts
-const askAgeFn: PromptFunction<MyData> = async (m: MessageInterface, data: MyData) => {
+const askAgeFn: PromptFunction<MyData, MessageType> = async (m: MessageType, data: MyData) => {
   const age = Number(m.content)
   if (isNaN(age)) {
     throw new Rejection(`That's not a valid number! Try again.`)
@@ -150,12 +151,21 @@ const askAgeFn: PromptFunction<MyData> = async (m: MessageInterface, data: MyDat
 
 #### Skipping Message Collection
 
-To skip message collecting and only send a message (usually done at the end of prompts), simply leave the second argument of `Prompt` as `undefined`.
+To skip message collecting and only send a prompt's visual (usually done at the end of prompts), simply leave the second argument of `Prompt` as `undefined`.
 
 ```ts
-const askNamePrompt = new MyPrompt<MyData>({
+const askNamePrompt = new MyPrompt<MyData, MessageType>({
   text: 'The end is nigh'
 })
+```
+
+#### Time Limits
+
+To automatically end message collection after a set duration, pass your duration in milliseconds as the 4th argument to `Prompt`. Your implemented `onInactivity` method will then be called.
+
+```ts
+const duration = 90000
+const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn, askNameCondition, duration)
 ```
 
 ### Connecting Prompts
@@ -163,12 +173,12 @@ const askNamePrompt = new MyPrompt<MyData>({
 To connect prompts, you must put them into nodes and connect nodes together by setting their children. This allows prompts to be reused by attaching children to nodes instead of prompts.
 
 ```ts
-const askNameNode = new PromptNode<MyData>(askNamePrompt)
-const askAgeNode = new PromptNode<MyData>(askAgePrompt)
-const askLocationNode = new PromptNode<MyData>(askLocationPrompt)
+const askNameNode = new PromptNode<MyData, MessageType>(askNamePrompt)
+const askAgeNode = new PromptNode<MyData, MessageType>(askAgePrompt)
+const askLocationNode = new PromptNode<MyData, MessageType>(askLocationPrompt)
 // After we ask for the location, we'd like to send a prompt in a different language based on their input
-const englishAskNode = new PromptNode<MyData>(englishAskPrompt)
-const spanishAskNode = new PromptNode<MyData>(spanishAskPrompt)
+const englishAskNode = new PromptNode<MyData, MessageType>(englishAskPrompt)
+const spanishAskNode = new PromptNode<MyData, MessageType>(spanishAskPrompt)
 
 askNameNode.addChild(askAgeNode)
 askAgeNode.addChild(askLocationNode)
@@ -188,7 +198,7 @@ After your prompt nodes are created, create a `PromptRunner` that is initialized
 
 ```ts
 // The initial data that is given to the first prompt is passed to the PromptRunner's constructor
-const runner = new PromptRunner<MyData>({})
+const runner = new PromptRunner<MyData, MessageType>({})
 
 // run resolves with the data returned from the last prompt
 const channel: ChannelInterface = myImplementedChannel()
@@ -203,7 +213,7 @@ You can also run an array of prompt nodes. The first node that either has no con
 const runner = new PromptRunner<MyData>({})
 
 // runArray resolves with the data returned from the last prompt
-const channel: ChannelInterface = myImplementedChannel()
+const channel: ChannelInterface<MessageType> = myImplementedChannel()
 const lastPromptData: MyData = await runner.runArray([
   askSurnameNode,
   askNameNode
@@ -236,23 +246,23 @@ it('runs correctly for age <= 20', () => {
     age?: number;
   }
   // Set up spies and the global emitter we'll use
-  const emitter: PromptCollector<AgeData> = new EventEmitter()
+  const emitter: PromptCollector<AgeData, MessageType> = new EventEmitter()
   const spy = jest.spyOn(MyPrompt.prototype, 'createCollector')
     .mockReturnValue(emitter)
 
   // Ask name Prompt that collects messages
-  const askNameFn: PromptFunction<AgeData> = async function (m, data) {
+  const askNameFn: PromptFunction<AgeData, MessageType> = async function (m, data) {
     return {
       ...data,
       name: m.content
     }
   }
-  const askName = new ConsolePrompt(() => ({
+  const askName = new MyPrompt<AgeData>(() => ({
     text: `What's your name?`
   }), askNameFn)
 
   // Ask age Prompt that collects messages
-  const askAgeFn: PromptFunction<AgeData> = async function (m, data) {
+  const askAgeFn: PromptFunction<AgeData, MessageType> = async function (m, data) {
     if (isNaN(Number(m.content))) {
       throw new Errors.Rejection()
     }
@@ -261,7 +271,7 @@ it('runs correctly for age <= 20', () => {
       age: Number(m.content)
     }
   }
-  const askAge = new MyPrompt((data) => ({
+  const askAge = new MyPrompt<AgeData>((data) => ({
     text: `How old are you, ${data.name}?`
   }), askAgeFn)
 
