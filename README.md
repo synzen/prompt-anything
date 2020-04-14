@@ -1,6 +1,6 @@
 
 # Prompt Anything
-[![Maintainability](https://badgen.net/codeclimate/maintainability/codeclimate/codeclimate?style=flat)](https://codeclimate.com/github/synzen/discord-menus/maintainability)
+[![Maintainability](https://badgen.net/codeclimate/maintainability/synzen/prompt-anything?style=flat)](https://codeclimate.com/github/synzen/prompt-anything/maintainability)
 <a href="https://badgen.net/codeclimate/coverage/synzen/prompt-anything?style=flat"><img src="https://img.shields.io/codeclimate/coverage/synzen/prompt-anything?style=flat-square" /></a>
 ![Github license](https://badgen.net/github/license/synzen/prompt-anything?style=flat)
 
