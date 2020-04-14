@@ -23,7 +23,7 @@ class ConsoleMessage implements MessageInterface {
   }
 }
 
-class ConsoleChannel implements ChannelInterface {
+class ConsoleChannel implements ChannelInterface<ConsoleMessage> {
   async send (visual: ConsoleVisual): Promise<ConsoleMessage> {
     if (!visual.newline) {
       process.stdout.write(visual.text + ' ')
@@ -34,7 +34,7 @@ class ConsoleChannel implements ChannelInterface {
   }
 }
 
-class ConsolePrompt<T> extends Prompt<T> {
+class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
   static exitVisual: ConsoleVisual = {
     text: `No longer accepting input.`,
     newline: true
@@ -52,18 +52,18 @@ class ConsolePrompt<T> extends Prompt<T> {
 
   // Implement abstract methods. These events are automatically called
   // and should NOT be called manually. These evnts should be emitted
-  async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface): Promise<void> {
+  async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface<ConsoleMessage>): Promise<void> {
     await this.sendVisual(ConsolePrompt.getRejectVisual(error), channel)
   }
-  async onInactivity(channel: ChannelInterface): Promise<void> {
+  async onInactivity(channel: ChannelInterface<ConsoleMessage>): Promise<void> {
     await this.sendVisual(ConsolePrompt.inactivityVisual, channel)
   }
-  async onExit(message: MessageInterface, channel: ChannelInterface): Promise<void> {
+  async onExit(message: MessageInterface, channel: ChannelInterface<ConsoleMessage>): Promise<void> {
     await this.sendVisual(ConsolePrompt.exitVisual, channel)
   }
 
-  createCollector(channel: ChannelInterface, data: T): PromptCollector<T> {
-    const emitter: PromptCollector<T> = new EventEmitter()
+  createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T, ConsoleMessage> {
+    const emitter: PromptCollector<T, ConsoleMessage> = new EventEmitter()
     const readline = createInterface({
       input: process.stdin,
       output: process.stdout
@@ -97,7 +97,7 @@ type AgePromptData = {
 }
 
 // Ask name Prompt that collects messages
-const askNameFn: PromptFunction<AgePromptData> = async function (m, data) {
+const askNameFn: PromptFunction<AgePromptData, ConsoleMessage> = async function (m, data) {
   return {
     ...data,
     name: m.content
@@ -109,7 +109,7 @@ const askName = new ConsolePrompt({
 } as ConsoleVisual, askNameFn)
 
 // Ask age Prompt that collects messages
-const askAgeFn: PromptFunction<AgePromptData> = async function (m, data) {
+const askAgeFn: PromptFunction<AgePromptData, ConsoleMessage> = async function (m, data) {
   if (isNaN(Number(m.content))) {
     throw new Rejection(`That's not a number!`)
   }
