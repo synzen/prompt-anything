@@ -1,7 +1,7 @@
 
 # Prompt Anything
 [![Maintainability](https://badgen.net/codeclimate/maintainability/synzen/prompt-anything?style=flat)](https://codeclimate.com/github/synzen/prompt-anything/maintainability)
-<a href="https://badgen.net/codeclimate/coverage/synzen/prompt-anything?style=flat"><img src="https://img.shields.io/codeclimate/coverage/synzen/prompt-anything?style=flat-square" /></a>
+[![Test Coverage](https://badgen.net/codeclimate/coverage/synzen/prompt-anything?style=flat)](https://codeclimate.com/github/synzen/prompt-anything/test_coverage)
 ![Github license](https://badgen.net/github/license/synzen/prompt-anything?style=flat)
 
 A modular and customizable framework to build prompts of any kind (such as ones within the console)! Originally inspired by the need to create console-like prompts in other applications such as chatting with bots.
