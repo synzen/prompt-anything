@@ -111,8 +111,7 @@ export class PromptRunner<DataType, MessageType extends MessageInterface> {
     let thisData = this.initialData
     while (thisNode) {
       const thisPrompt: Prompt<DataType, MessageType> = thisNode.prompt
-      await thisNode.prompt.sendUserVisual(channel, thisData)
-      const { data, terminate } = await thisPrompt.collect(channel, thisData)
+      const { data, terminate } = await thisPrompt.run(channel, thisData)
       this.ran.push(thisNode.prompt)
       thisData = data
       if (terminate) {

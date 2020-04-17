@@ -116,54 +116,6 @@ describe('Unit::PromptRunner', () => {
     })
   })
   describe('execute', () => {
-    it('sends all prompt messages', async () => {
-      const channel = createMockChannel()
-      const prompt1 = new MyPrompt(promptVis, promptFunc)
-      const prompt2 = new MyPrompt(promptVis, promptFunc)
-      const prompt3 = new MyPrompt(promptVis, promptFunc)
-      const node1 = new PromptNode(prompt1)
-      node1.prompt = prompt1
-      const node2 = new PromptNode(prompt2)
-      node2.prompt = prompt2
-      const node3 = new PromptNode(prompt3)
-      node3.prompt = prompt3
-      jest.spyOn(node1, 'getNext')
-        .mockResolvedValue(node2)
-      jest.spyOn(node2, 'getNext')
-        .mockResolvedValue(node3)
-      jest.spyOn(node3, 'getNext')
-        .mockResolvedValue(null)
-      const prompts = [prompt1, prompt2, prompt3]
-      const promptsCollectedData = [
-        { a: 1 },
-        { a: 2, b: 2 }
-      ]
-      const sendUserVisualSpies = prompts.map((p, index) => {
-        jest.spyOn(p, 'collect').mockResolvedValue({
-          data: promptsCollectedData[index],
-          terminate: false
-        })
-        return jest.spyOn(p, 'sendUserVisual')
-      })
-      const initialData = {
-        a: 0
-      }
-      const runner = new PromptRunner<{}, MessageInterface>({})
-      runner.initialData = initialData
-      await runner.execute(node1, channel)
-      expect(sendUserVisualSpies[0]).toHaveBeenCalledWith(
-        channel,
-        initialData
-      )
-      expect(sendUserVisualSpies[1]).toHaveBeenCalledWith(
-        channel,
-        promptsCollectedData[0]
-      )
-      expect(sendUserVisualSpies[2]).toHaveBeenCalledWith(
-        channel,
-        promptsCollectedData[1]
-      )
-    })
     it('runs all prompts', async () => {
       const channel = createMockChannel()
       const prompt1 = new MyPrompt(promptVis, promptFunc)
@@ -183,7 +135,7 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(null)
       const prompts = [prompt1, prompt2, prompt3]
       const collectSpies = prompts.map(p => {
-        return jest.spyOn(p, 'collect').mockResolvedValue({
+        return jest.spyOn(p, 'run').mockResolvedValue({
           data: {},
           terminate: false
         })
@@ -213,7 +165,7 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(null)
       const prompts = [prompt1, prompt2, prompt3]
       prompts.forEach(p => {
-        return jest.spyOn(p, 'collect').mockResolvedValue({
+        return jest.spyOn(p, 'run').mockResolvedValue({
           data: {},
           terminate: false
         })
@@ -241,7 +193,7 @@ describe('Unit::PromptRunner', () => {
       }
       jest.spyOn(node1, 'getNext')
         .mockResolvedValue(node2)
-      jest.spyOn(prompt1, 'collect')
+      jest.spyOn(prompt1, 'run')
         .mockResolvedValue(prompt1Returned)
       const prompt2Returned = {
         data: { val: 2, b: 2 },
@@ -249,7 +201,7 @@ describe('Unit::PromptRunner', () => {
       }
       jest.spyOn(node2, 'getNext')
         .mockResolvedValue(node3)
-      jest.spyOn(prompt2, 'collect')
+      jest.spyOn(prompt2, 'run')
         .mockResolvedValue(prompt2Returned)
       const prompt3Returned = {
         data: { val: 3, c: 3 },
@@ -257,7 +209,7 @@ describe('Unit::PromptRunner', () => {
       }
       jest.spyOn(node3, 'getNext')
         .mockResolvedValue(null)
-      jest.spyOn(prompt3, 'collect')
+      jest.spyOn(prompt3, 'run')
         .mockResolvedValue(prompt3Returned)
       const runner = new PromptRunner<{}, MessageInterface>({})
       const returned = await runner.execute(node1, channel)
@@ -280,21 +232,21 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(node3)
       jest.spyOn(node3, 'getNext')
         .mockResolvedValue(null)
-      jest.spyOn(prompt1, 'collect').mockResolvedValue({
+      jest.spyOn(prompt1, 'run').mockResolvedValue({
         data: {},
         terminate: false
       })
-      jest.spyOn(prompt2, 'collect').mockResolvedValue({
+      jest.spyOn(prompt2, 'run').mockResolvedValue({
         data: {},
         terminate: true
       })
-      const prompt3Collect = jest.spyOn(prompt3, 'collect').mockResolvedValue({
+      const prompt3Run = jest.spyOn(prompt3, 'run').mockResolvedValue({
         data: {},
         terminate: true
       })
       const runner = new PromptRunner<{}, MessageInterface>({})
       await runner.execute(node1, channel)
-      expect(prompt3Collect).not.toHaveBeenCalled()
+      expect(prompt3Run).not.toHaveBeenCalled()
     })
   })
   describe('indexesOf', () => {

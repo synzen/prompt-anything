@@ -472,4 +472,20 @@ describe('Unit::Prompt', () => {
       })
     })
   })
+  describe('run', () => {
+    it('sends the user visual and starts collecting', async () => {
+      const prompt = new MyPrompt(promptVis)
+      const sendUserVisual = jest.spyOn(prompt, 'sendUserVisual')
+        .mockImplementation()
+      const collect = jest.spyOn(prompt, 'collect')
+        .mockImplementation()
+      const channel = createMockChannel()
+      const data = {
+        foo :'baz'
+      }
+      await prompt.run(channel, data)
+      expect(sendUserVisual).toHaveBeenCalledWith(channel, data)
+      expect(collect).toHaveBeenCalledWith(channel, data)
+    })
+  })
 })

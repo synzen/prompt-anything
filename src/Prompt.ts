@@ -235,5 +235,16 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
       })
     })
   }
+
+  /**
+   * Send the user's visual and start collecting messages
+   * 
+   * @param channel The channel to collect from
+   * @param data Data before this prompt
+   */
+  async run (channel: ChannelInterface<MessageType>, data: DataType): Promise<PromptResult<DataType>> {
+    await this.sendUserVisual(channel, data)
+    return this.collect(channel, data)
+  }
 }
 
