@@ -62,8 +62,8 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
     await this.sendVisual(ConsolePrompt.exitVisual, channel)
   }
 
-  createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T, ConsoleMessage> {
-    const emitter: PromptCollector<T, ConsoleMessage> = new EventEmitter()
+  createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T> {
+    const emitter: PromptCollector<T> = new EventEmitter()
     const readline = createInterface({
       input: process.stdin,
       output: process.stdout
@@ -118,26 +118,26 @@ const askAgeFn: PromptFunction<AgePromptData, ConsoleMessage> = async function (
     age: Number(m.content)
   }
 }
-const askAge = new ConsolePrompt((data): ConsoleVisual => ({
+const askAge = new ConsolePrompt(async (data) => ({
   text: `How old are you, ${data.name}?`,
   newline: true
-}), askAgeFn)
+}) as ConsoleVisual, askAgeFn)
 
 // Conditional Prompt with no collector via undefined function
-const tooOld = new ConsolePrompt<AgePromptData>((data) => ({
+const tooOld = new ConsolePrompt<AgePromptData>(async (data) => ({
   text: `Welcome ${data.name}, at ${data.age} you can freely drink.`
-}), undefined, async (data) => !!data.age && data.age > 21)
+}))
 
 // Conditional Prompt with no collector via undefined function
-const tooYoung = new ConsolePrompt<AgePromptData>((data) => ({
+const tooYoung = new ConsolePrompt<AgePromptData>(async (data) => ({
   text: `Woah ${data.name}, at ${data.age} you can't drink yet.`
-}), undefined, async (data) => !!data.age && data.age <= 21)
+}))
 
 // Create the nodes. Prompts can be used by different nodes
 const askNameNode = new PromptNode(askName)
 const askAgeNode = new PromptNode(askAge)
-const tooOldNode = new PromptNode(tooOld)
-const tooYoungNode = new PromptNode(tooYoung)
+const tooOldNode = new PromptNode(tooOld, async (data: AgePromptData) => !!data.age && data.age > 21)
+const tooYoungNode = new PromptNode(tooYoung, async (data: AgePromptData) => !!data.age && data.age <= 21)
 askNameNode.setChildren([askAgeNode])
 // Nodes with more than 1 sibling must have conditions defined
 askAgeNode.setChildren([tooOldNode, tooYoungNode])
