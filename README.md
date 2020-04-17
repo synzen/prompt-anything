@@ -10,12 +10,12 @@ A modular and customizable framework to build prompts of any kind (such as ones 
 - [Implementation](#implementation)
 - [Usage](#usage)
   - [Creating a Prompt](#creating-a-prompt)
-    - [Conditional Prompts](#conditional-prompts)
     - [Conditional Visuals](#conditional-visuals)
     - [Rejecting Input](#rejecting-input)
     - [Skipping Message Collection](#skipping-message-collection)
     - [Time Limits](#time-limits)
   - [Connecting Prompts](#connecting-prompts)
+    - [Condition Nodes](#conditional-nodes)
   - [Running Prompts](#running-prompts)
 - [Testing](#testing)
 
@@ -64,11 +64,10 @@ class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
 See the `examples/console.ts` for a functioning implementation that accepts input from the console.
 
 ### Creating a Prompt
-A prompt is composed of three parts:
+A prompt is composed of two parts:
 
 1. `VisualInterface|VisualGenerator` - A object or function that determines how the prompt looks like to the user
 2. `PromptFunction` - An (ideally [pure](https://en.wikipedia.org/wiki/Pure_function)) function that runs on every input from your collector
-3. `PromptCondition` - A function to determine if it should run
 
 ```ts
 // Data type that is passed to each prompt
@@ -100,30 +99,12 @@ The `PromptFunction` should be [pure function](https://en.wikipedia.org/wiki/Pur
 
 As a result, the function should always be referencing the original data variable passed from the previous prompt, regardless of how many times the function is run.
 
-#### Conditional Prompts
-
-If you only want a prompt to run if it matches a condition, you can specify a condition function as the third argument of a `Prompt`.
-
-```ts
-const askNameCondition = (data: MyData) => {
-  // Don't run askName if data.human is true
-  if (data.human) {
-    return false
-  } else {
-    return true
-  }
-}
-const askNamePrompt = new MyPrompt<MyData, MessageType>({
-  text: 'What is your name?'
-}, askNameFn, askNameCondition)
-```
-
 #### Conditional Visuals
 
 If you want a prompt's visual to be dependent on the given data, you can pass a function as the argument of a `Prompt` instead of an object.
 
 ```ts
-const askNamePrompt = new MyPrompt<MyData, MessageType>((data: MyData): VisualInterface => ({
+const askNamePrompt = new MyPrompt<MyData, MessageType>(async (data: MyData): Promise<VisualInterface> => ({
   text: `Hello ${data.human ? 'non-human' : 'human'}! What is your name?`
 }), askNameFn)
 ```
@@ -176,9 +157,21 @@ To connect prompts, you must put them into nodes and connect nodes together by s
 const askNameNode = new PromptNode<MyData, MessageType>(askNamePrompt)
 const askAgeNode = new PromptNode<MyData, MessageType>(askAgePrompt)
 const askLocationNode = new PromptNode<MyData, MessageType>(askLocationPrompt)
+
+askNameNode.addChild(askAgeNode)
+askAgeNode.addChild(askLocationNode)
+```
+
+#### Conditional Nodes
+
+If you only want a node to run if it matches a condition (given the data from the previous prompt node), you can specify a condition function `PromptNodeCondition` as the second argument of a `PromptNode`.
+
+```ts
 // After we ask for the location, we'd like to send a prompt in a different language based on their input
-const englishAskNode = new PromptNode<MyData, MessageType>(englishAskPrompt)
-const spanishAskNode = new PromptNode<MyData, MessageType>(spanishAskPrompt)
+const englishAskNodeCondition: PromptNodeCondition<MyData> = async (data) => !!data.location && data.location === 'loc1'
+const englishAskNode = new PromptNode<MyData, MessageType>(englishAskPrompt, englishAskNodeCondition)
+const spanishAskNodeCondition: PromptNodeCondition<MyData> = async (data) => !!data.location && data.location === 'loc2'
+const spanishAskNode = new PromptNode<MyData, MessageType>(spanishAskPrompt, spanishAskNodeCondition)
 
 askNameNode.addChild(askAgeNode)
 askAgeNode.addChild(askLocationNode)
