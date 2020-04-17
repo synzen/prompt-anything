@@ -22,6 +22,15 @@ class MyPrompt extends Prompt<{}, MessageInterface> {
 
 const promptVis = {text: '1'}
 describe('Unit::PromptNode', () => {
+  describe('constructor', () => {
+    it('initializes', () => {
+      const prompt = new MyPrompt({ text: 'd' })
+      const condition = async (): Promise<boolean> => true
+      const promptNode = new PromptNode(prompt, condition)
+      expect(promptNode.prompt).toEqual(prompt)
+      expect(promptNode.condition).toEqual(condition)
+    })
+  })
   describe('hasValidChildren', () => {
     it('returns true for prompt with 0 or 1 child', () => {
       const prompt = new MyPrompt({text: ''})
@@ -50,14 +59,19 @@ describe('Unit::PromptNode', () => {
       const prompt = new MyPrompt({text: ''})
       const node = new PromptNode(prompt)
       const child1 = new MyPrompt({text: ''})
-      Object.defineProperty(child1, 'condition', {
-        value: jest.fn()
-      })
       const child2 = new MyPrompt({text: ''})
-      Object.defineProperty(child2, 'condition', {
+      const child1Node = new PromptNode(child1)
+      Object.defineProperty(child1Node, 'condition', {
         value: jest.fn()
       })
-      node.children = [new PromptNode(child1), new PromptNode(child2)]
+      const child2Node = new PromptNode(child2)
+      Object.defineProperty(child2Node, 'condition', {
+        value: jest.fn()
+      })
+      node.children = [
+        child1Node,
+        child2Node
+      ]
       expect(node.hasValidChildren()).toEqual(true)
     })
   })
@@ -68,18 +82,21 @@ describe('Unit::PromptNode', () => {
       const promptC1 = new MyPrompt(promptVis)
       const promptC2 = new MyPrompt(promptVis)
       const promptC3 = new MyPrompt(promptVis)
+      const promptC1Node = new PromptNode(promptC1)
+      const promptC2Node = new PromptNode(promptC2)
+      const promptC3Node = new PromptNode(promptC3)
       node.children = [
-        new PromptNode(promptC1),
-        new PromptNode(promptC2),
-        new PromptNode(promptC3)
+        promptC1Node,
+        promptC2Node,
+        promptC3Node
       ]
-      Object.defineProperty(promptC1, 'condition', {
+      Object.defineProperty(promptC1Node, 'condition', {
         value: async () => false
       })
-      Object.defineProperty(promptC2, 'condition', {
+      Object.defineProperty(promptC2Node, 'condition', {
         value: async () => true
       })
-      Object.defineProperty(promptC3, 'condition', {
+      Object.defineProperty(promptC3Node, 'condition', {
         value: async () => true
       })
       await expect(node.getNext({}))
@@ -90,14 +107,16 @@ describe('Unit::PromptNode', () => {
       const node = new PromptNode(prompt)
       const promptC1 = new MyPrompt(promptVis)
       const promptC2 = new MyPrompt(promptVis)
+      const promptC1Node = new PromptNode(promptC1)
+      const promptC2Node = new PromptNode(promptC2)
       node.children = [
-        new PromptNode(promptC1),
-        new PromptNode(promptC2)
+        promptC1Node,
+        promptC2Node
       ]
-      Object.defineProperty(promptC1, 'condition', {
+      Object.defineProperty(promptC1Node, 'condition', {
         value: async () => false
       })
-      Object.defineProperty(promptC2, 'condition', {
+      Object.defineProperty(promptC2Node, 'condition', {
         value: async () => false
       })
       await expect(node.getNext({}))
@@ -108,11 +127,13 @@ describe('Unit::PromptNode', () => {
       const node = new PromptNode(prompt)
       const promptC1 = new MyPrompt(promptVis)
       const promptC2 = new MyPrompt(promptVis)
+      const promptC1Node = new PromptNode(promptC1)
+      const promptC2Node = new PromptNode(promptC2)
       node.children = [
-        new PromptNode(promptC1),
-        new PromptNode(promptC2)
+        promptC1Node,
+        promptC2Node
       ]
-      Object.defineProperty(promptC1, 'condition', {
+      Object.defineProperty(promptC1Node, 'condition', {
         value: async () => false
       })
       await expect(node.getNext({}))

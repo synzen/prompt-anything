@@ -59,13 +59,11 @@ describe('Unit::Prompt', () => {
     text: 'foobar'
   })
   const promptFunc = async (): Promise<{}> => ({})
-  const promptCond = async (): Promise<boolean> => false
   it('initializes correctly', () => {
     const duration = 234
-    const prompt = new MyPrompt(promptVis, promptFunc, promptCond, duration)
+    const prompt = new MyPrompt(promptVis, promptFunc, duration)
     expect(prompt.visualGenerator).toEqual(promptVis)
     expect(prompt.function).toEqual(promptFunc)
-    expect(prompt.condition).toEqual(promptCond)
     expect(prompt.duration).toEqual(duration)
   })
   describe('getVisual', () => {

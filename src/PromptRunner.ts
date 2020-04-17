@@ -12,7 +12,7 @@ export class PromptRunner<DataType, MessageType extends MessageInterface> {
   }
 
   /**
-   * Checks whether the tree of prompts is valid. A valid tree
+   * Checks whether the tree of nodes is valid. A valid tree
    * is one all children has a condition if there 2 or more
    * children.
    * 
@@ -61,7 +61,7 @@ export class PromptRunner<DataType, MessageType extends MessageInterface> {
   async getFirstNode (nodes: Array<PromptNode<DataType, MessageType>>): Promise<PromptNode<DataType, MessageType>|null> {
     for (let i = 0; i < nodes.length; ++i) {
       const node = nodes[i]
-      const condition = node.prompt.condition
+      const condition = node.condition
       if (!condition || await condition(this.initialData)) {
         return node
       }

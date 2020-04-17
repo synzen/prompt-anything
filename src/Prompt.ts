@@ -26,8 +26,6 @@ export interface PromptCollector<DataType> extends EventEmitter {
 
 export type VisualGenerator<DataType> = (data: DataType) => Promise<VisualInterface>
 
-export type PromptCondition<DataType> = (data: DataType) => Promise<boolean>
-
 export type StoredMessage = {
   message: MessageInterface;
   fromUser: boolean;
@@ -73,13 +71,11 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<DataType, MessageType>
-  readonly condition?: PromptCondition<DataType>
 
-  constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType, MessageType>, condition?: PromptCondition<DataType>, duration = 0) {
+  constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType, MessageType>, duration = 0) {
     this.visualGenerator = visualGenerator
     this.duration = duration
     this.function = f
-    this.condition = condition
   }
 
   /**

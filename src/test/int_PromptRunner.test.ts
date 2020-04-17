@@ -1,8 +1,8 @@
-import { Prompt, VisualGenerator, PromptFunction, PromptCondition } from "../Prompt"
+import { Prompt, VisualGenerator, PromptFunction } from "../Prompt"
 import { PromptRunner } from '../PromptRunner'
 import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
-import { PromptNode } from "../PromptNode";
+import { PromptNode, PromptNodeCondition } from "../PromptNode";
 import { MessageInterface } from "../interfaces/Message";
 
 async function flushPromises(): Promise<void> {
@@ -27,7 +27,7 @@ const createMockMessage = (content = ''): MockMessage => ({
   content
 })
 
-const promptForm: VisualGenerator<{}> = () => ({
+const promptForm: VisualGenerator<{}> = async () => ({
   text: '1',
   embed: {
     title: '1'
@@ -92,27 +92,15 @@ describe('Int::PromptRunner', () => {
       const promptR = new MyPrompt(promptForm, promptFunc)
       const promptR1 = new MyPrompt(promptForm, promptFunc)
       const promptR11 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR11, 'condition', {
-        value: () => false
-      })
       const promptR12 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR12, 'condition', {
-        value: () => true
-      })
       const promptR121 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR121, 'condition', {
-        value: () => true
-      })
       const promptR122 = new MyPrompt(promptForm, promptFunc)
-      Object.defineProperty(promptR122, 'condition', {
-        value: () => true
-      })
       const nodeR = new PromptNode(promptR)
       const nodeR1 = new PromptNode(promptR1)
-      const nodeR11 = new PromptNode(promptR11)
-      const nodeR12 = new PromptNode(promptR12)
-      const nodeR121 = new PromptNode(promptR121)
-      const nodeR122 = new PromptNode(promptR122)
+      const nodeR11 = new PromptNode(promptR11, async () => false)
+      const nodeR12 = new PromptNode(promptR12, async () => true)
+      const nodeR121 = new PromptNode(promptR121, async () => true)
+      const nodeR122 = new PromptNode(promptR122, async () => true)
       nodeR.children = [nodeR1]
       nodeR1.children = [nodeR11, nodeR12]
       nodeR11.children = []
@@ -126,17 +114,17 @@ describe('Int::PromptRunner', () => {
     it('runs the right prompts (ignoring collect)', async () => {
       const channel = createMockChannel()
       const promptR = new MyPrompt(promptForm, promptFunc)
-      const promptRC1 = new MyPrompt(promptForm, promptFunc, async () => false)
-      const promptRC2 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const promptRC1 = new MyPrompt(promptForm, promptFunc)
+      const promptRC2 = new MyPrompt(promptForm, promptFunc)
       const promptRC11 = new MyPrompt(promptForm, promptFunc)
-      const promptRC111 = new MyPrompt(promptForm, undefined, async () => true)
-      const promptRC112 = new MyPrompt(promptForm, undefined, async () => false)
+      const promptRC111 = new MyPrompt(promptForm)
+      const promptRC112 = new MyPrompt(promptForm)
       const nodeR = new PromptNode(promptR)
-      const nodeRC1 = new PromptNode(promptRC1)
-      const nodeRC2 = new PromptNode(promptRC2)
+      const nodeRC1 = new PromptNode(promptRC1, async () => false)
+      const nodeRC2 = new PromptNode(promptRC2, async () => true)
       const nodeRC11 = new PromptNode(promptRC11)
-      const nodeRC111 = new PromptNode(promptRC111)
-      const nodeRC112 = new PromptNode(promptRC112)
+      const nodeRC111 = new PromptNode(promptRC111, async () => true)
+      const nodeRC112 = new PromptNode(promptRC112, async () => false)
       const prompts = [promptR, promptRC1, promptRC2, promptRC11, promptRC111, promptRC112]
       const spies = prompts.map(p => {
         return jest.spyOn(p, 'collect').mockResolvedValue({
@@ -187,17 +175,17 @@ describe('Int::PromptRunner', () => {
     it('works with the first matching node', async () => {
       const channel = createMockChannel()
       // Prompts
-      const prompt1 = new MyPrompt(promptForm, promptFunc, async () => false)
-      const prompt2 = new MyPrompt(promptForm, promptFunc, async () => true)
-      const prompt3 = new MyPrompt(promptForm, promptFunc, async () => true)
-      const prompt4 = new MyPrompt(promptForm, promptFunc, async () => false)
-      const prompt5 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const prompt1 = new MyPrompt(promptForm, promptFunc)
+      const prompt2 = new MyPrompt(promptForm, promptFunc)
+      const prompt3 = new MyPrompt(promptForm, promptFunc)
+      const prompt4 = new MyPrompt(promptForm, promptFunc)
+      const prompt5 = new MyPrompt(promptForm, promptFunc)
       // Nodes
-      const node1 = new PromptNode(prompt1)
-      const node2 = new PromptNode(prompt2)
-      const node3 = new PromptNode(prompt3)
-      const node4 = new PromptNode(prompt4)
-      const node5 = new PromptNode(prompt5)
+      const node1 = new PromptNode(prompt1, async () => false)
+      const node2 = new PromptNode(prompt2, async () => true)
+      const node3 = new PromptNode(prompt3, async () => true)
+      const node4 = new PromptNode(prompt4, async () => false)
+      const node5 = new PromptNode(prompt5, async () => true)
       // Set node children
       const entry = [node1, node2]
       node2.children = [node3]
@@ -227,13 +215,13 @@ describe('Int::PromptRunner', () => {
       const channel = createMockChannel()
       // Prompts
       const prompt = new MyPrompt(promptForm, promptFunc)
-      const promptC1 = new MyPrompt(promptForm, promptFunc, async () => false)
-      const promptC2 = new MyPrompt(promptForm, promptFunc, async () => true)
+      const promptC1 = new MyPrompt(promptForm, promptFunc)
+      const promptC2 = new MyPrompt(promptForm, promptFunc)
       const promptC21 = new MyPrompt(promptForm)
       // Nodes
       const node = new PromptNode(prompt)
-      const nodeC1 = new PromptNode(promptC1)
-      const nodeC2 = new PromptNode(promptC2)
+      const nodeC1 = new PromptNode(promptC1, async () => false)
+      const nodeC2 = new PromptNode(promptC2, async () => true)
       const nodeC21 = new PromptNode(promptC21)
       node.children = [nodeC1, nodeC2]
       nodeC2.children = [nodeC21]
@@ -258,7 +246,7 @@ describe('Int::PromptRunner', () => {
         age?: number;
         name?: string;
       }
-      const thisPromptForm: VisualGenerator<PromptData> = () => ({
+      const thisPromptForm: VisualGenerator<PromptData> = async () => ({
         text: '1',
         embed: {
           title: '1'
@@ -284,21 +272,21 @@ describe('Int::PromptRunner', () => {
         data.age = Number(m.content)
         return data
       }
-      const tooOldFn: PromptCondition<PromptData> = async (data) => {
+      const tooOldCondition: PromptNodeCondition<PromptData> = async (data) => {
         return !!(data.age && data.age >= 20)
       }
-      const tooYoungFn: PromptCondition<PromptData> = async (data) => {
+      const tooYoungCondition: PromptNodeCondition<PromptData> = async (data) => {
         return !!(data.age && data.age < 20)
       }
 
       const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn)
       const askAge = new MyPrompt<PromptData>(thisPromptForm, askAgeFn)
-      const tooOld = new MyPrompt<PromptData>(thisPromptForm, undefined, tooOldFn)
-      const tooYoung = new MyPrompt<PromptData>(thisPromptForm, undefined, tooYoungFn)
+      const tooOld = new MyPrompt<PromptData>(thisPromptForm)
+      const tooYoung = new MyPrompt<PromptData>(thisPromptForm)
       const askNameNode = new PromptNode(askName)
       const askAgeNode = new PromptNode(askAge)
-      const tooOldNode = new PromptNode(tooOld)
-      const tooYoungNode = new PromptNode(tooYoung)
+      const tooOldNode = new PromptNode(tooOld, tooOldCondition)
+      const tooYoungNode = new PromptNode(tooYoung, tooYoungCondition)
       askNameNode.setChildren([askAgeNode])
       askAgeNode.setChildren([tooOldNode, tooYoungNode])
       
@@ -329,7 +317,7 @@ describe('Int::PromptRunner', () => {
         age?: number;
         name?: string;
       }
-      const thisPromptForm: VisualGenerator<PromptData> = () => ({
+      const thisPromptForm: VisualGenerator<PromptData> = async () => ({
         text: '1',
         embed: {
           title: '1'
@@ -361,22 +349,22 @@ describe('Int::PromptRunner', () => {
         return data
       }
       const tooOldFnSpy = jest.fn()
-      const tooOldFn: PromptCondition<PromptData> = async (data) => {
+      const tooOldCondition: PromptNodeCondition<PromptData> = async (data) => {
         tooOldFnSpy()
         return !!(data.age && data.age >= 20)
       }
       const tooYoungFnSpy = jest.fn()
-      const tooYoungFn: PromptCondition<PromptData> = async (data) => {
+      const tooYoungCondition: PromptNodeCondition<PromptData> = async (data) => {
         tooYoungFnSpy()
         return !!(data.age && data.age < 20)
       }
       const askAge = new MyPrompt<PromptData>(thisPromptForm, askAgeFn)
-      const tooOld = new MyPrompt<PromptData>(thisPromptForm, undefined, tooOldFn)
-      const tooYoung = new MyPrompt<PromptData>(thisPromptForm, undefined, tooYoungFn)
+      const tooOld = new MyPrompt<PromptData>(thisPromptForm)
+      const tooYoung = new MyPrompt<PromptData>(thisPromptForm)
       const askNameNode = new PromptNode(askName)
       const askAgeNode = new PromptNode(askAge)
-      const tooOldNode = new PromptNode(tooOld)
-      const tooYoungNode = new PromptNode(tooYoung)
+      const tooOldNode = new PromptNode(tooOld, tooOldCondition)
+      const tooYoungNode = new PromptNode(tooYoung, tooYoungCondition)
       askNameNode.setChildren([askAgeNode])
       askAgeNode.setChildren([tooOldNode, tooYoungNode])
       

@@ -2,12 +2,20 @@ import { Prompt } from "./Prompt"
 import { TreeNode } from "./TreeNode"
 import { MessageInterface } from "./interfaces/Message"
 
+export type PromptNodeCondition<DataType> = (data: DataType) => Promise<boolean>
+
 export class PromptNode<DataType, MessageType extends MessageInterface> extends TreeNode<PromptNode<DataType, MessageType>> {
   prompt: Prompt<DataType, MessageType>
+  readonly condition?: PromptNodeCondition<DataType>
 
-  constructor (prompt: Prompt<DataType, MessageType>) {
+  /**
+   * @param prompt Prompt to run
+   * @param condition Condition for this node to run
+   */
+  constructor (prompt: Prompt<DataType, MessageType>, condition?: PromptNodeCondition<DataType>) {
     super()
     this.prompt = prompt
+    this.condition = condition
   }
 
   /**
@@ -22,7 +30,7 @@ export class PromptNode<DataType, MessageType extends MessageInterface> extends 
     }
     // There are more 2 or more children - they must have conditions
     for (const child of children) {
-      if (!child.prompt.condition) {
+      if (!child.condition) {
         return false
       }
     }
@@ -30,7 +38,7 @@ export class PromptNode<DataType, MessageType extends MessageInterface> extends 
   }
 
     /**
-   * Determine what the next prompt is given data.
+   * Determine what the next prompt node is given data.
    * 
    * @param data The data before this prompt
    */
@@ -38,8 +46,7 @@ export class PromptNode<DataType, MessageType extends MessageInterface> extends 
     const { children } = this
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]
-      const childPrompt = child.prompt
-      if (!childPrompt.condition || await childPrompt.condition(data)) {
+      if (!child.condition || await child.condition(data)) {
         return child
       }
     }

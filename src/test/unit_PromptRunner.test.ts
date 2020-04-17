@@ -331,22 +331,22 @@ describe('Unit::PromptRunner', () => {
   describe('getFirstNode', () => {
     it('returns the first prompt whose condition passes', async () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt1, 'condition', {
-        value: async () => false
-      })
       const prompt2 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt2, 'condition', {
-        value: async () => true
-      })
       const prompt3 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt3, 'condition', {
+      const prompt1Node = new PromptNode(prompt1)
+      Object.defineProperty(prompt1Node, 'condition', {
         value: async () => false
       })
-      const prompt1Node = new PromptNode(prompt1)
       prompt1Node.prompt = prompt1
       const prompt2Node = new PromptNode(prompt2)
+      Object.defineProperty(prompt2Node, 'condition', {
+        value: async () => true
+      })
       prompt2Node.prompt = prompt2
       const prompt3Node = new PromptNode(prompt3)
+      Object.defineProperty(prompt3Node, 'condition', {
+        value: async () => false
+      })
       prompt3Node.prompt = prompt3
       const runner = new PromptRunner({})
       await expect(runner.getFirstNode([
@@ -357,22 +357,22 @@ describe('Unit::PromptRunner', () => {
     })
     it('returns the first prompt with no', async () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt1, 'condition', {
-        value: async () => false
-      })
       const prompt2 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt2, 'condition', {
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const prompt1Node = new PromptNode(prompt1)
+      Object.defineProperty(prompt1Node, 'condition', {
         value: async () => false
       })
-      const prompt3 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt3, 'condition', {
-        value: undefined
-      })
-      const prompt1Node = new PromptNode(prompt1)
       prompt1Node.prompt = prompt1
       const prompt2Node = new PromptNode(prompt2)
+      Object.defineProperty(prompt2Node, 'condition', {
+        value: async () => false
+      })
       prompt2Node.prompt = prompt2
       const prompt3Node = new PromptNode(prompt3)
+      Object.defineProperty(prompt3Node, 'condition', {
+        value: undefined
+      })
       prompt3Node.prompt = prompt3
       const runner = new PromptRunner({})
       await expect(runner.getFirstNode([
@@ -383,22 +383,22 @@ describe('Unit::PromptRunner', () => {
     })
     it('returns the first node with a passing condition', async () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt1, 'condition', {
-        value: async () => false
-      })
       const prompt2 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt2, 'condition', {
-        value: async () => true
-      })
       const prompt3 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt3, 'condition', {
+      const prompt1Node = new PromptNode(prompt1)
+      Object.defineProperty(prompt1Node, 'condition', {
         value: async () => false
       })
-      const prompt1Node = new PromptNode(prompt1)
       prompt1Node.prompt = prompt1
       const prompt2Node = new PromptNode(prompt2)
+      Object.defineProperty(prompt2Node, 'condition', {
+        value: async () => true
+      })
       prompt2Node.prompt = prompt2
       const prompt3Node = new PromptNode(prompt3)
+      Object.defineProperty(prompt3Node, 'condition', {
+        value: async () => false
+      })
       prompt3Node.prompt = prompt3
       const runner = new PromptRunner({})
       await expect(runner.getFirstNode([
@@ -409,16 +409,16 @@ describe('Unit::PromptRunner', () => {
     })
     it('returns null if no conditions match', async () => {
       const prompt1 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt1, 'condition', {
-        value: async () => false
-      })
       const prompt2 = new MyPrompt(promptVis, promptFunc)
-      Object.defineProperty(prompt2, 'condition', {
+      const prompt1Node = new PromptNode(prompt1)
+      Object.defineProperty(prompt1Node, 'condition', {
         value: async () => false
       })
-      const prompt1Node = new PromptNode(prompt1)
       prompt1Node.prompt = prompt1
       const prompt2Node = new PromptNode(prompt2)
+      Object.defineProperty(prompt2Node, 'condition', {
+        value: async () => false
+      })
       prompt2Node.prompt = prompt2
       const runner = new PromptRunner({})
       await expect(runner.getFirstNode([
