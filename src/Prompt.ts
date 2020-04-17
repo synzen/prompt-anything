@@ -7,7 +7,7 @@ import { ChannelInterface } from './interfaces/Channel';
 
 export type PromptFunction<DataType, MessageType extends MessageInterface> = (m: MessageType, data: DataType) => Promise<DataType>
 
-export interface PromptCollector<DataType, MessageType extends MessageInterface> extends EventEmitter {
+export interface PromptCollector<DataType> extends EventEmitter {
   emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
   emit(event: 'accept', message: MessageInterface, data: DataType): boolean;
   emit(event: 'exit', message: MessageInterface): boolean;
@@ -24,7 +24,7 @@ export interface PromptCollector<DataType, MessageType extends MessageInterface>
   once(event: 'stop', listener: () => void): this;
 }
 
-export type VisualGenerator<DataType> = (data: DataType) => VisualInterface
+export type VisualGenerator<DataType> = (data: DataType) => Promise<VisualInterface>
 
 export type PromptCondition<DataType> = (data: DataType) => Promise<boolean>
 
@@ -40,7 +40,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param channel Channel to create the collector in
    * @param data Prompt data
    */
-  abstract createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType, MessageType>;
+  abstract createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType>;
 
   /**
    * When a message is rejected, this function is additionally called
@@ -69,7 +69,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    */
   abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
   visualGenerator: VisualGenerator<DataType>|VisualInterface
-  collector?: PromptCollector<DataType, MessageType>
+  collector?: PromptCollector<DataType>
   readonly duration: number
   readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<DataType, MessageType>
@@ -87,7 +87,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * 
    * @param data
    */
-  getVisual (data: DataType): VisualInterface {
+  async getVisual (data: DataType): Promise<VisualInterface> {
     if (typeof this.visualGenerator === 'function') {
       return this.visualGenerator(data)
     } else {
@@ -103,7 +103,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data Prompt data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, func: PromptFunction<DataType, MessageType>, data?: DataType, duration?: number): void {
+  static handleCollector<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType>, func: PromptFunction<DataType, MessageType>, data?: DataType, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
@@ -128,7 +128,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, message: MessageInterface, func: PromptFunction<DataType, MessageType>, data?: DataType): Promise<void> {
+  static async handleMessage<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType>, message: MessageInterface, func: PromptFunction<DataType, MessageType>, data?: DataType): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
@@ -163,7 +163,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data Data to generate the user's message
    */
   async sendUserVisual (channel: ChannelInterface<MessageType>, data: DataType): Promise<MessageInterface> {
-    return this.sendVisual(this.getVisual(data), channel)
+    return this.sendVisual(await this.getVisual(data), channel)
   }
 
   /**

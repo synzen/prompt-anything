@@ -32,7 +32,7 @@ const createMockChannel = (): MockChannel => ({
 })
 
 describe('Unit::PromptRunner', () => {
-  const promptVis: VisualGenerator<{}> = () => ({
+  const promptVis: VisualGenerator<{}> = async () => ({
     text: '1',
     embed: {
       title: '1'

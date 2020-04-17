@@ -1,4 +1,4 @@
-import { Prompt } from "../Prompt"
+import { Prompt, VisualGenerator } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
 import { MessageInterface } from "../interfaces/Message";
@@ -55,7 +55,7 @@ describe('Unit::Prompt', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
-  const promptVis = (): { text: string } => ({
+  const promptVis = async (): Promise<{ text: string }> => ({
     text: 'foobar'
   })
   const promptFunc = async (): Promise<{}> => ({})
@@ -69,26 +69,29 @@ describe('Unit::Prompt', () => {
     expect(prompt.duration).toEqual(duration)
   })
   describe('getVisual', () => {
-    it('returns the function return value if visual generator is func', () => {
-      const prompt = new MyPrompt(promptVis)
+    it('returns the function return value if visual generator is func', async () => {
+      const prompt = new MyPrompt<{}>(promptVis)
       const visual = {
         text: 'qaedg'
       }
       const data = {
         jo: 'bo'
       }
-      prompt.visualGenerator = jest.fn(() => visual)
-      expect(prompt.getVisual(data)).toEqual(visual)
-      expect(prompt.visualGenerator)
+      const generator: VisualGenerator<{}> = jest.fn().mockResolvedValue(visual)
+      prompt.visualGenerator = generator
+      await expect(prompt.getVisual(data))
+        .resolves.toEqual(visual)
+      expect(generator)
         .toHaveBeenCalledWith(data)
     })
-    it('directly returns the value if visual generator is not func', () => {
+    it('directly returns the value if visual generator is not func', async () => {
       const prompt = new MyPrompt(promptVis)
       const visual = {
         text: 'qaedg'
       }
       prompt.visualGenerator = visual
-      expect(prompt.getVisual({})).toEqual(visual)
+      await expect(prompt.getVisual({}))
+        .resolves.toEqual(visual)
     })
   })
   describe('static handleMessage', () => {
@@ -204,7 +207,7 @@ describe('Unit::Prompt', () => {
         foo: 1
       }
       jest.spyOn(prompt, 'getVisual')
-        .mockReturnValue(visual)
+        .mockResolvedValue(visual)
       jest.spyOn(prompt, 'sendVisual')
         .mockResolvedValue(sentMessage)
       const returned = await prompt.sendUserVisual(channel, data)
@@ -219,7 +222,7 @@ describe('Unit::Prompt', () => {
       }
       const data = {}
       jest.spyOn(prompt, 'getVisual')
-        .mockReturnValue(visual)
+        .mockResolvedValue(visual)
       const spy = jest.spyOn(prompt, 'sendVisual')
         .mockResolvedValue(sentMessage)
       await prompt.sendUserVisual(channel, data)
@@ -232,7 +235,7 @@ describe('Unit::Prompt', () => {
     }
     it('sends the generated visual', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.visualGenerator = (): { text: string } => visual
+      prompt.visualGenerator = async (): Promise<{ text: string }> => visual
       const channel = createMockChannel()
       await prompt.sendVisual(visual, channel)
       expect(channel.send)
@@ -240,7 +243,7 @@ describe('Unit::Prompt', () => {
     })
     it('returns the message if it exists', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.visualGenerator = (): { text: string } => visual
+      prompt.visualGenerator = async (): Promise<{ text: string }> => visual
       const returnedMessage = createMockMessage()
       const channel = createMockChannel()
       channel.send.mockResolvedValue(returnedMessage)
