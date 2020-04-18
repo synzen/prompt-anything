@@ -233,7 +233,6 @@ describe('Unit::Prompt', () => {
     }
     it('sends the generated visual', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.visualGenerator = async (): Promise<{ text: string }> => visual
       const channel = createMockChannel()
       await prompt.sendVisual(visual, channel)
       expect(channel.send)
@@ -241,12 +240,72 @@ describe('Unit::Prompt', () => {
     })
     it('returns the message if it exists', async () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
-      prompt.visualGenerator = async (): Promise<{ text: string }> => visual
       const returnedMessage = createMockMessage()
       const channel = createMockChannel()
       channel.send.mockResolvedValue(returnedMessage)
       const returned = await prompt.sendVisual(visual, channel)
       expect(returned).toEqual(returnedMessage)
+    })
+    it('sends all messages if array of visuals', async () => {
+      const prompt = new MyPrompt(promptVis, promptFunc)
+      const visuals = [{
+        text: '1'
+      }, {
+        text: '2'
+      }]
+      // prompt.visualGenerator = async (): Promise<{ text: string }[]> => visuals
+      const message1 = createMockMessage('1')
+      const message2 = createMockMessage('2')
+      const channel = createMockChannel()
+      const send = channel.send
+        .mockResolvedValueOnce(message1)
+        .mockResolvedValueOnce(message2)
+      jest.spyOn(prompt, 'storeBotMessage')
+        .mockImplementation()
+      await prompt.sendVisual(visuals, channel) as MessageInterface[]
+      expect(send).toHaveBeenNthCalledWith(1, visuals[0])
+      expect(send).toHaveBeenNthCalledWith(2, visuals[1])
+    })
+    it('returns the array of messages if array of visuals', async () => {
+      const prompt = new MyPrompt(promptVis, promptFunc)
+      const visuals = [{
+        text: '1'
+      }, {
+        text: '2'
+      }]
+      // prompt.visualGenerator = async (): Promise<{ text: string }[]> => visuals
+      const message1 = createMockMessage('1')
+      const message2 = createMockMessage('2')
+      const channel = createMockChannel()
+      channel.send
+        .mockResolvedValueOnce(message1)
+        .mockResolvedValueOnce(message2)
+      jest.spyOn(prompt, 'storeBotMessage')
+        .mockImplementation()
+      const returned = await prompt.sendVisual(visuals, channel) as MessageInterface[]
+      expect(returned.length).toEqual(2)
+      expect(returned[0]).toEqual(message1)
+      expect(returned[1]).toEqual(message2)
+    })
+    it('stores all the bot messages if array of visuals', async () => {
+      const prompt = new MyPrompt(promptVis, promptFunc)
+      const visuals = [{
+        text: '1'
+      }, {
+        text: '2'
+      }]
+      // prompt.visualGenerator = async (): Promise<{ text: string }[]> => visuals
+      const message1 = createMockMessage('1')
+      const message2 = createMockMessage('2')
+      const channel = createMockChannel()
+      channel.send
+        .mockResolvedValueOnce(message1)
+        .mockResolvedValueOnce(message2)
+      const storeBotMessage = jest.spyOn(prompt, 'storeBotMessage')
+        .mockImplementation()
+      await prompt.sendVisual(visuals, channel)
+      expect(storeBotMessage).toHaveBeenNthCalledWith(1, message1)
+      expect(storeBotMessage).toHaveBeenNthCalledWith(2, message2)
     })
   })
   describe('storeUserMessage', () => {
