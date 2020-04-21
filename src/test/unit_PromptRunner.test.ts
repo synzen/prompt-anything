@@ -71,7 +71,7 @@ describe('Unit::PromptRunner', () => {
       expect(returned).toEqual(executeReturnValue)
     })
   })
-  describe('validate', () => {
+  describe('static valid', () => {
     it('returns false if root prompt has no valid children', () => {
       const prompt = new MyPrompt(promptVis, promptFunc)
       const node = new PromptNode(prompt)
@@ -113,6 +113,21 @@ describe('Unit::PromptRunner', () => {
       jest.spyOn(node4, 'hasValidChildren').mockReturnValue(false)
       jest.spyOn(node5, 'hasValidChildren').mockReturnValue(true)
       expect(PromptRunner.valid(node1)).toEqual(false)
+    })
+    it('works with recursion', () => {
+      const prompt1 = new MyPrompt(promptVis, promptFunc)
+      const prompt2 = new MyPrompt(promptVis, promptFunc)
+      const prompt3 = new MyPrompt(promptVis, promptFunc)
+      const node1 = new PromptNode(prompt1)
+      const node2 = new PromptNode(prompt2)
+      const node3 = new PromptNode(prompt3)
+      node1.children = [node2, node3]
+      node2.children = [node2]
+      node3.children = [node3]
+      jest.spyOn(node1, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(node2, 'hasValidChildren').mockReturnValue(true)
+      jest.spyOn(node3, 'hasValidChildren').mockReturnValue(true)
+      expect(PromptRunner.valid(node1)).toEqual(true)
     })
   })
   describe('execute', () => {

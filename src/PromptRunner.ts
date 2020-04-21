@@ -18,13 +18,17 @@ export class PromptRunner<DataType, MessageType extends MessageInterface> {
    * 
    * @param prompt Root prompt
    */
-  static valid<DataType, MessageType extends MessageInterface> (prompt: PromptNode<DataType, MessageType>): boolean {
+  static valid<DataType, MessageType extends MessageInterface> (prompt: PromptNode<DataType, MessageType>, seen: Set<PromptNode<DataType, MessageType>> = new Set()): boolean {
+    if (seen.has(prompt)) {
+      return true
+    }
     if (!prompt.hasValidChildren()) {
       return false
     }
+    seen.add(prompt)
     const children = prompt.children
     for (const child of children) {
-      if (!this.valid(child)) {
+      if (!this.valid(child, seen)) {
         return false
       }
     }
