@@ -7,18 +7,18 @@ import { ChannelInterface } from './interfaces/Channel';
 
 export type PromptFunction<DataType, MessageType extends MessageInterface> = (m: MessageType, data: DataType) => Promise<DataType>
 
-export interface PromptCollector<DataType> extends EventEmitter {
-  emit(event: 'reject', message: MessageInterface, error: Rejection): boolean;
-  emit(event: 'accept', message: MessageInterface, data: DataType): boolean;
-  emit(event: 'exit', message: MessageInterface): boolean;
+export interface PromptCollector<DataType, MessageType> extends EventEmitter {
+  emit(event: 'reject', message: MessageType, error: Rejection): boolean;
+  emit(event: 'accept', message: MessageType, data: DataType): boolean;
+  emit(event: 'exit', message: MessageType): boolean;
   emit(event: 'inactivity'): boolean;
   emit(event: 'error', error: Error): boolean;
-  emit(event: 'message', message: MessageInterface): boolean;
+  emit(event: 'message', message: MessageType): boolean;
   emit(event: 'stop'): boolean;
-  on(event: 'message', listener: (message: MessageInterface) => void): this;
-  on(event: 'reject', listener: (message: MessageInterface, error: Rejection) => void): this;
-  once(event: 'accept', listener: (message: MessageInterface, data: DataType) => void): this;
-  once(event: 'exit', listener: (message: MessageInterface) => void): this;
+  on(event: 'message', listener: (message: MessageType) => void): this;
+  on(event: 'reject', listener: (message: MessageType, error: Rejection) => void): this;
+  once(event: 'accept', listener: (message: MessageType, data: DataType) => void): this;
+  once(event: 'exit', listener: (message: MessageType) => void): this;
   once(event: 'inactivity', listener: () => void): this;
   once(event: 'error', listener: (error: Error) => void): this;
   once(event: 'stop', listener: () => void): this;
@@ -38,7 +38,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param channel Channel to create the collector in
    * @param data Prompt data
    */
-  abstract createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType>;
+  abstract createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType, MessageType>;
 
   /**
    * When a message is rejected, this function is additionally called
@@ -67,9 +67,9 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    */
   abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
   visualGenerator: VisualGenerator<DataType>|VisualInterface
-  collector?: PromptCollector<DataType>
+  collector?: PromptCollector<DataType, MessageType>
+  messages: Array<StoredMessage> = []
   readonly duration: number
-  readonly messages: Array<StoredMessage> = []
   readonly function?: PromptFunction<DataType, MessageType>
 
   constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType, MessageType>, duration = 0) {
@@ -99,14 +99,14 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data Prompt data
    * @param duration Duration of collector before it emits inactivity
    */
-  static handleCollector<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType>, func: PromptFunction<DataType, MessageType>, data?: DataType, duration?: number): void {
+  static handleCollector<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, func: PromptFunction<DataType, MessageType>, data?: DataType, duration?: number): void {
     let timer: NodeJS.Timeout
     if (duration) {
       timer = setTimeout(() => {
         emitter.emit('inactivity')
       }, duration)
     }
-    emitter.on('message', async thisMessage => {
+    emitter.on('message', async (thisMessage: MessageType) => {
       await this.handleMessage(emitter, thisMessage, func, data)
     })
     emitter.once('stop', () => {
@@ -124,7 +124,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param func Prompt function
    * @param data Prompt data
    */
-  static async handleMessage<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType>, message: MessageInterface, func: PromptFunction<DataType, MessageType>, data?: DataType): Promise<void> {
+  static async handleMessage<DataType, MessageType extends MessageInterface> (emitter: PromptCollector<DataType, MessageType>, message: MessageType, func: PromptFunction<DataType, MessageType>, data?: DataType): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
@@ -219,7 +219,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
         collector.emit('stop')
         reject(err)
       })
-      collector.once('accept', (acceptMessage: MessageInterface, acceptData: DataType): void => {
+      collector.once('accept', (acceptMessage: MessageType, acceptData: DataType): void => {
         this.storeUserMessage(acceptMessage)
         collector.emit('stop')
         resolve(new PromptResult(acceptData))
@@ -231,14 +231,14 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
           .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
-      collector.once('exit', (exitMessage: MessageInterface) => {
+      collector.once('exit', (exitMessage: MessageType) => {
         this.storeUserMessage(exitMessage)
         collector.emit('stop')
         this.onExit(exitMessage as MessageType, channel, data)
           .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
-      collector.on('reject', (userInput: MessageInterface, err: Rejection): void => {
+      collector.on('reject', (userInput: MessageType, err: Rejection): void => {
         this.storeUserMessage(userInput)
         this.onReject(userInput as MessageType, err, channel, data)
           .catch(handleInternalError)

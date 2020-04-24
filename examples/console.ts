@@ -62,8 +62,8 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
     await this.sendVisual(ConsolePrompt.exitVisual, channel)
   }
 
-  createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T> {
-    const emitter: PromptCollector<T> = new EventEmitter()
+  createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T, ConsoleMessage> {
+    const emitter: PromptCollector<T, ConsoleMessage> = new EventEmitter()
     const readline = createInterface({
       input: process.stdin,
       output: process.stdout
