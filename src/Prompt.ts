@@ -66,10 +66,9 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data The data of the current prompt
    */
   abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
-  visualGenerator: VisualGenerator<DataType>|VisualInterface
-  collector?: PromptCollector<DataType, MessageType>
   messages: Array<StoredMessage> = []
   readonly duration: number
+  readonly visualGenerator: VisualGenerator<DataType>|VisualInterface
   readonly function?: PromptFunction<DataType, MessageType>
 
   constructor(visualGenerator: VisualGenerator<DataType>|VisualInterface, f?: PromptFunction<DataType, MessageType>, duration = 0) {
@@ -209,8 +208,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
         resolve(new PromptResult(data))
         return
       }
-      this.collector = this.createCollector(channel, data)
-      const collector = this.collector
+      const collector = this.createCollector(channel, data)
       Prompt.handleCollector(collector, this.function, data, this.duration)
 
       const handleInternalError = (error: Error): boolean => collector.emit('error', error)
@@ -234,13 +232,13 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
       collector.once('exit', (exitMessage: MessageType) => {
         this.storeUserMessage(exitMessage)
         collector.emit('stop')
-        this.onExit(exitMessage as MessageType, channel, data)
+        this.onExit(exitMessage, channel, data)
           .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageType, err: Rejection): void => {
         this.storeUserMessage(userInput)
-        this.onReject(userInput as MessageType, err, channel, data)
+        this.onReject(userInput, err, channel, data)
           .catch(handleInternalError)
       })
     })

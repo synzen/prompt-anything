@@ -76,7 +76,9 @@ describe('Unit::Prompt', () => {
         jo: 'bo'
       }
       const generator: VisualGenerator<{}> = jest.fn().mockResolvedValue(visual)
-      prompt.visualGenerator = generator
+      Object.defineProperty(prompt, 'visualGenerator', {
+        value: generator
+      })
       await expect(prompt.getVisual(data))
         .resolves.toEqual(visual)
       expect(generator)
@@ -87,7 +89,9 @@ describe('Unit::Prompt', () => {
       const visual = {
         text: 'qaedg'
       }
-      prompt.visualGenerator = visual
+      Object.defineProperty(prompt, 'visualGenerator', {
+        value: visual
+      })
       await expect(prompt.getVisual({}))
         .resolves.toEqual(visual)
     })
