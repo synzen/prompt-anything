@@ -26,11 +26,6 @@ export interface PromptCollector<DataType, MessageType> extends EventEmitter {
 
 export type VisualGenerator<DataType> = (data: DataType) => Promise<VisualInterface|VisualInterface[]>
 
-export type StoredMessage = {
-  message: MessageInterface;
-  fromUser: boolean;
-}
-
 export abstract class Prompt<DataType, MessageType extends MessageInterface> {
   /**
    * Create a collector that is part of a prompt
@@ -66,7 +61,6 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data The data of the current prompt
    */
   abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
-  messages: Array<StoredMessage> = []
   readonly duration: number
   readonly visualGenerator: VisualGenerator<DataType>|VisualInterface
   readonly function?: PromptFunction<DataType, MessageType>
@@ -150,13 +144,11 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
       const sent = []
       for (const v of visual) {
         const message = await channel.send(v)
-        this.storeBotMessage(message)
         sent.push(message)
       }
       return sent
     } else {
       const sent = await channel.send(visual)
-      this.storeBotMessage(sent)
       return sent
     }
   }
@@ -169,30 +161,6 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    */
   async sendUserVisual (channel: ChannelInterface<MessageType>, data: DataType): Promise<MessageType|MessageType[]> {
     return this.sendVisual(await this.getVisual(data), channel)
-  }
-
-  /**
-   * Store a message sent by the user into this prompt's store
-   * 
-   * @param message Message sent by the user
-   */
-  storeUserMessage (message: MessageInterface): void {
-    this.messages.push({
-      message,
-      fromUser: true
-    })
-  }
-
-  /**
-   * Store a message sent by this prompt into this prompt's store
-   * 
-   * @param message Message sent by this prompt
-   */
-  storeBotMessage (message: MessageInterface): void {
-    this.messages.push({
-      message,
-      fromUser: false
-    })
   }
 
   /**
@@ -218,7 +186,6 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
         reject(err)
       })
       collector.once('accept', (acceptMessage: MessageType, acceptData: DataType): void => {
-        this.storeUserMessage(acceptMessage)
         collector.emit('stop')
         resolve(new PromptResult(acceptData))
       })
@@ -230,14 +197,12 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
           .catch(handleInternalError)
       })
       collector.once('exit', (exitMessage: MessageType) => {
-        this.storeUserMessage(exitMessage)
         collector.emit('stop')
         this.onExit(exitMessage, channel, data)
           .then(() => resolve(new PromptResult(data, true)))
           .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageType, err: Rejection): void => {
-        this.storeUserMessage(userInput)
         this.onReject(userInput, err, channel, data)
           .catch(handleInternalError)
       })

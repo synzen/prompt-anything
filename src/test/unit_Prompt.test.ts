@@ -264,8 +264,6 @@ describe('Unit::Prompt', () => {
       const send = channel.send
         .mockResolvedValueOnce(message1)
         .mockResolvedValueOnce(message2)
-      jest.spyOn(prompt, 'storeBotMessage')
-        .mockImplementation()
       await prompt.sendVisual(visuals, channel) as MessageInterface[]
       expect(send).toHaveBeenNthCalledWith(1, visuals[0])
       expect(send).toHaveBeenNthCalledWith(2, visuals[1])
@@ -284,54 +282,10 @@ describe('Unit::Prompt', () => {
       channel.send
         .mockResolvedValueOnce(message1)
         .mockResolvedValueOnce(message2)
-      jest.spyOn(prompt, 'storeBotMessage')
-        .mockImplementation()
       const returned = await prompt.sendVisual(visuals, channel) as MessageInterface[]
       expect(returned.length).toEqual(2)
       expect(returned[0]).toEqual(message1)
       expect(returned[1]).toEqual(message2)
-    })
-    it('stores all the bot messages if array of visuals', async () => {
-      const prompt = new MyPrompt(promptVis, promptFunc)
-      const visuals = [{
-        text: '1'
-      }, {
-        text: '2'
-      }]
-      // prompt.visualGenerator = async (): Promise<{ text: string }[]> => visuals
-      const message1 = createMockMessage('1')
-      const message2 = createMockMessage('2')
-      const channel = createMockChannel()
-      channel.send
-        .mockResolvedValueOnce(message1)
-        .mockResolvedValueOnce(message2)
-      const storeBotMessage = jest.spyOn(prompt, 'storeBotMessage')
-        .mockImplementation()
-      await prompt.sendVisual(visuals, channel)
-      expect(storeBotMessage).toHaveBeenNthCalledWith(1, message1)
-      expect(storeBotMessage).toHaveBeenNthCalledWith(2, message2)
-    })
-  })
-  describe('storeUserMessage', () => {
-    it('stores correctly', () => {
-      const prompt = new MyPrompt(promptVis)
-      const message = createMockMessage()
-      prompt.storeUserMessage(message)
-      expect(prompt.messages).toEqual([{
-        message,
-        fromUser: true
-      }])
-    })
-  })
-  describe('storeBotMessage', () => {
-    it('stores correctly', () => {
-      const prompt = new MyPrompt(promptVis)
-      const message = createMockMessage()
-      prompt.storeBotMessage(message)
-      expect(prompt.messages).toEqual([{
-        message,
-        fromUser: false
-      }])
     })
   })
   describe('collect', () => {
@@ -344,10 +298,6 @@ describe('Unit::Prompt', () => {
       channel = createMockChannel()
       jest.spyOn(MyPrompt.prototype, 'createCollector')
         .mockReturnValue(emitter)
-      jest.spyOn(MyPrompt.prototype, 'storeUserMessage')
-        .mockReturnValue()
-      jest.spyOn(MyPrompt.prototype, 'storeBotMessage')
-        .mockReturnValue()
       jest.spyOn(MyPrompt.prototype, 'sendVisual')
         .mockResolvedValue(createMockMessage())
       jest.spyOn(MyPrompt, 'handleCollector')
@@ -380,15 +330,6 @@ describe('Unit::Prompt', () => {
           data,
           terminate: true
         })
-      })
-      it('stores the user message', async () => {
-        const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
-        const promptRun = prompt.collect(channel, {})
-        const exitMessage = createMockMessage()
-        emitter.emit('exit', exitMessage)
-        await promptRun
-        expect(storeUserMessage)
-          .toHaveBeenCalledWith(exitMessage)
       })
       it('calls onExit', async () => {
         const onExit = jest.spyOn(prompt, 'onExit')
@@ -468,19 +409,6 @@ describe('Unit::Prompt', () => {
         jest.spyOn(prompt, 'onReject')
           .mockResolvedValue()
       })
-      it('stores the user message', async () => {
-        jest.spyOn(prompt, 'onExit')
-          .mockResolvedValue()
-        const error = new Rejection('qateswgry')
-        const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
-        const rejectedMessage = createMockMessage()
-        const promptRun = prompt.collect(channel, {})
-        emitter.emit('reject', rejectedMessage, error)
-        emitter.emit('exit')
-        await promptRun
-        expect(storeUserMessage)
-          .toHaveBeenCalledWith(rejectedMessage)
-      })
       it('calls onReject', async () => {
         jest.spyOn(prompt, 'onExit')
           .mockResolvedValue()
@@ -521,17 +449,6 @@ describe('Unit::Prompt', () => {
           data: acceptData,
           terminate: false
         })
-      })
-      it('stores the messages', async () => {
-        const acceptMessage = createMockMessage()
-        const acceptData = {
-          foo: 1
-        }
-        const promptRun = prompt.collect(channel, {})
-        const storeUserMessage = jest.spyOn(prompt, 'storeUserMessage')
-        emitter.emit('accept', acceptMessage, acceptData)
-        await promptRun
-        expect(storeUserMessage).toHaveBeenCalledWith(acceptMessage)
       })
     })
   })
