@@ -38,12 +38,12 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
   /**
    * When a message is rejected, this function is additionally called
    * 
-   * @param message Message that was rejected
    * @param error The Rejection error the message caused
+   * @param message Message that was rejected
    * @param channel The channel of the current prompt
    * @param data The data of the current prompt
    */
-  abstract onReject(message: MessageType, error: Rejection, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
+  abstract onReject(error: Rejection, message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
 
   /**
    * When the collector expires, call this function
@@ -203,7 +203,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
           .catch(handleInternalError)
       })
       collector.on('reject', (userInput: MessageType, err: Rejection): void => {
-        this.onReject(userInput, err, channel, data)
+        this.onReject(err, userInput, channel, data)
           .catch(handleInternalError)
       })
     })
