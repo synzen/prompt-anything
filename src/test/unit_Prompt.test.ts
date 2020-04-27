@@ -422,7 +422,7 @@ describe('Unit::Prompt', () => {
         emitter.emit('reject', message, rejection, channel, data)
         emitter.emit('exit', createMockMessage())
         await promptRun
-        expect(onReject).toHaveBeenCalledWith(message, rejection, channel, data)
+        expect(onReject).toHaveBeenCalledWith(rejection, message, channel, data)
       })
       it('handles the error from onReject', async () => {
         const error = new Error('dtguj')
