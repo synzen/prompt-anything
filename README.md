@@ -53,7 +53,7 @@ class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
   }
   
   // Implement abstract methods. These events are automatically called
-  abstract async onReject(message: MessageType, error: Rejection, channel: ChannelInterface<MessageType>): Promise<void>;
+  abstract async onReject(error: Rejection, message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
   abstract async onInactivity(channel: ChannelInterface<MessageType>): Promise<void>;
   abstract async onExit(message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
 }
