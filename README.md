@@ -6,6 +6,10 @@
 
 A modular and customizable framework to build prompts of any kind (such as ones within the console)! Originally inspired by the need to create console-like prompts in other applications such as chatting with bots.
 
+```
+npm install prompt-anything
+```
+
 ### Table of Contents
 - [Implementation](#implementation)
 - [Usage](#usage)
