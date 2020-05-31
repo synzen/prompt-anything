@@ -104,9 +104,10 @@ As a result, the function should always be referencing the original data variabl
 If you want a prompt's visual to be dependent on the given data, you can pass a function as the argument of a `Prompt` instead of an object.
 
 ```ts
-const askNamePrompt = new MyPrompt<MyData, MessageType>(async (data: MyData): Promise<VisualInterface> => ({
+const askNameVisual = async (data: MyData): Promise<VisualInterface> => ({
   text: `Hello ${data.human ? 'non-human' : 'human'}! What is your name?`
-}), askNameFn)
+})
+const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn)
 ```
 
 #### Rejecting Input
@@ -135,18 +136,19 @@ const askAgeFn: PromptFunction<MyData, MessageType> = async (m: MessageType, dat
 To skip message collecting and only send a prompt's visual (usually done at the end of prompts), simply leave the second argument of `Prompt` as `undefined`.
 
 ```ts
-const askNamePrompt = new MyPrompt<MyData, MessageType>({
+const askNameVisual = {
   text: 'The end is nigh'
-})
+}
+const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual)
 ```
 
 #### Time Limits
 
-To automatically end message collection after a set duration, pass your duration in milliseconds as the 4th argument to `Prompt`. Your implemented `onInactivity` method will then be called.
+To automatically end message collection after a set duration, pass your duration in milliseconds as the 3rd argument to `Prompt`. Your implemented `onInactivity` method will then be called.
 
 ```ts
 const duration = 90000
-const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn, askNameCondition, duration)
+const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn, duration)
 ```
 
 ### Connecting Prompts
