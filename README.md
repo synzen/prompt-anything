@@ -26,7 +26,7 @@ npm install prompt-anything
 
 ## Implementation
 
-The following interfaces should be implemented:
+1. The following interfaces should be implemented:
 ```ts
 interface VisualInterface = {
   text: string;
@@ -40,7 +40,11 @@ interface ChannelInterface<MessageType extends MessageInterface> {
   send: (visual: VisualInterface) => Promise<MessageType>;
 }
 ```
-The `Prompt` method must be extended to implement the abstract methods `createCollector`, `onReject`, `onInactivity` and `onExit`. `createCollector` should returns an event emitter that should also emit `message` whenever your collector gets a message. Your collector should stop when the emitter emits `stop`.
+2. The `Prompt` class must be extended to implement the abstract methods:
+    - `createCollector` - Returns an event emitter that should also emit `message` whenever your collector gets a message
+    - `onReject` - Handles `Rejection` errors (see the rejecting input section)
+3. Your collector should stop when the emitter emits `stop`.
+4. You may optionally emit the `exit` event for the user to prematurely exit
 ```ts
 class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
   createCollector(channel: ChannelInterface<MessageType>, data: DataType): PromptCollector<DataType, MessageType> {
@@ -49,6 +53,10 @@ class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
     myCollector.on('myMessage', (message: MessageType) => {
       // Emit the messages from your collector here
       emitter.emit('message', message)
+      // Optionally allow exits
+      if (message === 'exit') {
+        emitter.emit('exit')
+      }
     })
     emitter.once('stop', () => {
       // Stop your collector here
@@ -59,8 +67,6 @@ class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
   
   // Implement abstract methods. These events are automatically called
   abstract async onReject(error: Errors.Rejection, message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
-  abstract async onInactivity(channel: ChannelInterface<MessageType>): Promise<void>;
-  abstract async onExit(message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
 }
 ```
 
@@ -147,14 +153,16 @@ const askNameVisual = {
 const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual)
 ```
 
-#### Time Limits
+#### Time Limits/Timeouts
 
-To automatically end message collection after a set duration, pass your duration in milliseconds as the 3rd argument to `Prompt`. Your implemented `onInactivity` method will then be called.
+To automatically end message collection after a set duration, pass your duration in milliseconds as the 3rd argument to `Prompt`.
 
 ```ts
 const duration = 90000
 const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn, duration)
 ```
+
+This causes a `Errors.UserInactivityError` to be thrown when the timeout is reached. The default value is 90000.
 
 ### Connecting Prompts
 
@@ -223,7 +231,12 @@ const lastPromptData: MyData = await runner.runArray([
 
 #### Error Handling
 
-Any error that throws within prompts will cause the `PromptRunner`'s `run` to reject. In addition to regular errors, it may throw `Errors.UserVoluntaryExitError` and `Errors.UserInactivityError` (both instances of `Errors.UserError`).
+Any error that throws within prompts will cause the `PromptRunner`'s `run` to reject. In addition to regular errors, it may throw
+
+1. `Errors.UserVoluntaryExitError` if you emit `exit` in `createCollector`
+2. `Errors.UserInactivityError` if timeout occurs (90000 ms by default)
+
+Both are instances of `Errors.UserError`.
 
 ```ts
 try {
