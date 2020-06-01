@@ -7,7 +7,8 @@ import {
   ChannelInterface,
   VisualInterface,
   Rejection,
-  PromptNode
+  PromptNode,
+  Errors
 } from '../src/index'
 import { EventEmitter } from 'events'
 import { createInterface } from 'readline'
@@ -104,7 +105,7 @@ const askNameFn: PromptFunction<AgePromptData, ConsoleMessage> = async function 
 const askName = new ConsolePrompt({
   text: `What's your name?`,
   newline: false
-} as ConsoleVisual, askNameFn, 2000)
+} as ConsoleVisual, askNameFn)
 
 // Ask age Prompt that collects messages
 const askAgeFn: PromptFunction<AgePromptData, ConsoleMessage> = async function (m, data) {
@@ -145,5 +146,11 @@ const runner = new PromptRunner({})
 const channel = new ConsoleChannel()
 runner.run(askNameNode, channel)
   .catch(err => {
-    console.error('got err', err)
+    if (err instanceof Errors.UserInactivityError) {
+      console.log('Time expired')
+    } else if (err instanceof Errors.UserVoluntaryExitError) {
+      console.log('You exited')
+    } else {
+      console.error(err)
+    }
   })
