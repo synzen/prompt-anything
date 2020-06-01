@@ -2,15 +2,11 @@ import { Prompt, VisualGenerator } from "../Prompt"
 import { EventEmitter } from 'events'
 import { Rejection } from '../errors/Rejection'
 import { MessageInterface } from "../interfaces/Message";
+import { UserVoluntaryExitError } from "../errors/user/UserVoluntaryExitError";
+import { UserInactivityError } from "../errors/user/UserInactivityError";
 
 class MyPrompt<DataType> extends Prompt<DataType, MessageInterface> {
   onReject(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  onInactivity(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  onExit(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   createCollector (): EventEmitter {
@@ -315,85 +311,23 @@ describe('Unit::Prompt', () => {
       })
     })
     describe('collector exit', () => {
-      beforeEach(() => {
-        jest.spyOn(prompt, 'onExit')
-          .mockResolvedValue()
-      })
-      it('terminates on collector exit', async () => {
+      it('rejects on collector exit', async () => {
         const data = {
           foo: 'bbb'
         }
         const promptRun = prompt.collect(channel, data)
         emitter.emit('exit')
-        const result = await promptRun
-        expect(result).toEqual({
-          data,
-          terminate: true
-        })
-      })
-      it('calls onExit', async () => {
-        const onExit = jest.spyOn(prompt, 'onExit')
-        const data = {
-          foo: 'bar'
-        }
-        const promptRun = prompt.collect(channel, data)
-        const exitMessage = createMockMessage()
-        emitter.emit('exit', exitMessage, channel, data)
-        await promptRun
-        expect(onExit).toHaveBeenCalledWith(exitMessage, channel, data)
-      })
-      it('handles the error from onExit', async () => {
-        const error = new Error('dtguj')
-        const emit = jest.spyOn(emitter, 'emit')
-        jest.spyOn(prompt, 'onExit')
-          .mockRejectedValue(error)
-        const promptRun = prompt.collect(channel, {})
-        const exitMessage = createMockMessage()
-        emitter.emit('exit', exitMessage)
-        // Reject the run
-        await expect(promptRun).rejects.toThrow(error)
-        // Notify the user to clean up their collector
-        expect(emit).toHaveBeenCalledWith('stop')
+        await expect(promptRun).rejects.toThrow(UserVoluntaryExitError)
       })
     })
     describe('collector inactivity', () => {
-      beforeEach(() => {
-        jest.spyOn(prompt, 'onInactivity')
-          .mockResolvedValue()
-      })
-      it('terminates on collector inactivity', async () => {
+      it('rejects on collector inactivity', async () => {
         const data = {
           foo: 'bar'
         }
         const promptRun = prompt.collect(channel, data)
         emitter.emit('inactivity')
-        const result = await promptRun
-        expect(result).toEqual({
-          data,
-          terminate: true
-        })
-      })
-      it('calls onInactivity', async () => {
-        const onInactivity = jest.spyOn(prompt, 'onInactivity')
-        const data = {
-          fo: 'baz'
-        }
-        const promptRun = prompt.collect(channel, data)
-        emitter.emit('inactivity', channel, data)
-        await promptRun
-        expect(onInactivity).toHaveBeenCalledWith(channel, data)
-      })
-      it('handles the error from onActivity', async () => {
-        const error = new Error('dtguj')
-        const emit = jest.spyOn(emitter, 'emit')
-        jest.spyOn(prompt, 'onInactivity')
-          .mockRejectedValue(error)
-        const promptRun = prompt.collect(channel, {})
-        emitter.emit('inactivity')
-        // Reject the run
-        await expect(promptRun).rejects.toThrow(error)
-        // Notify the user to clean up their collector
-        expect(emit).toHaveBeenCalledWith('stop')
+        await expect(promptRun).rejects.toThrow(UserInactivityError)
       })
     })
     describe('collector error', () => {
@@ -410,18 +344,16 @@ describe('Unit::Prompt', () => {
           .mockResolvedValue()
       })
       it('calls onReject', async () => {
-        jest.spyOn(prompt, 'onExit')
-          .mockResolvedValue()
         const onReject = jest.spyOn(prompt, 'onReject')
         const data = {
           foo: 'baz'
         }
-        const promptRun = prompt.collect(channel, data)
+        prompt.collect(channel, data)
         const message = createMockMessage()
         const rejection = new Rejection('azdsegr')
         emitter.emit('reject', message, rejection, channel, data)
-        emitter.emit('exit', createMockMessage())
-        await promptRun
+        emitter.emit('stop')
+        await flushPromises()
         expect(onReject).toHaveBeenCalledWith(rejection, message, channel, data)
       })
       it('handles the error from onReject', async () => {

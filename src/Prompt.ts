@@ -4,13 +4,15 @@ import { PromptResult } from './PromptResult';
 import { MessageInterface } from './interfaces/Message';
 import { VisualInterface } from './interfaces/Visual';
 import { ChannelInterface } from './interfaces/Channel';
+import { UserInactivityError } from './errors/user/UserInactivityError';
+import { UserVoluntaryExitError } from './errors/user/UserVoluntaryExitError';
 
 export type PromptFunction<DataType, MessageType extends MessageInterface> = (m: MessageType, data: DataType) => Promise<DataType>
 
 export interface PromptCollector<DataType, MessageType> extends EventEmitter {
   emit(event: 'reject', message: MessageType, error: Rejection): boolean;
   emit(event: 'accept', message: MessageType, data: DataType): boolean;
-  emit(event: 'exit', message: MessageType): boolean;
+  emit(event: 'exit'): boolean;
   emit(event: 'inactivity'): boolean;
   emit(event: 'error', error: Error): boolean;
   emit(event: 'message', message: MessageType): boolean;
@@ -18,7 +20,7 @@ export interface PromptCollector<DataType, MessageType> extends EventEmitter {
   on(event: 'message', listener: (message: MessageType) => void): this;
   on(event: 'reject', listener: (message: MessageType, error: Rejection) => void): this;
   once(event: 'accept', listener: (message: MessageType, data: DataType) => void): this;
-  once(event: 'exit', listener: (message: MessageType) => void): this;
+  once(event: 'exit', listener: () => void): this;
   once(event: 'inactivity', listener: () => void): this;
   once(event: 'error', listener: (error: Error) => void): this;
   once(event: 'stop', listener: () => void): this;
@@ -44,23 +46,6 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param data The data of the current prompt
    */
   abstract onReject(error: Rejection, message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
-
-  /**
-   * When the collector expires, call this function
-   * @param channel The channel of the current prompt
-   * @param data The data of the current prompt
-   */
-  abstract onInactivity(channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
-
-  /**
-   * When a message specifies it wants to exit the prompt,
-   * call this function
-   * 
-   * @param message The message that triggered the exit
-   * @param channel The channel of the current prompt
-   * @param data The data of the current prompt
-   */
-  abstract onExit(message: MessageType, channel: ChannelInterface<MessageType>, data: DataType): Promise<void>;
   readonly duration: number
   readonly visualGenerator: VisualGenerator<DataType>|VisualInterface
   readonly function?: PromptFunction<DataType, MessageType>
@@ -104,6 +89,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
     })
     emitter.once('stop', () => {
       clearTimeout(timer)
+      emitter.removeAllListeners()
     })
   }
 
@@ -177,9 +163,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
         return
       }
       const collector = this.createCollector(channel, data)
-      Prompt.handleCollector(collector, this.function, data, this.duration)
 
-      const handleInternalError = (error: Error): boolean => collector.emit('error', error)
       // Internally handled events
       collector.once('error', (err: Error) => {
         collector.emit('stop')
@@ -189,23 +173,19 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
         collector.emit('stop')
         resolve(new PromptResult(acceptData))
       })
+      collector.once('inactivity', () => {
+        collector.emit('error', new UserInactivityError())
+      })
+      collector.once('exit', () => {
+        collector.emit('error', new UserVoluntaryExitError())
+      })
       // User-overridden events
-      collector.once('inactivity', (): void => {
-        collector.emit('stop')
-        this.onInactivity(channel, data)
-          .then(() => resolve(new PromptResult(data, true)))
-          .catch(handleInternalError)
-      })
-      collector.once('exit', (exitMessage: MessageType) => {
-        collector.emit('stop')
-        this.onExit(exitMessage, channel, data)
-          .then(() => resolve(new PromptResult(data, true)))
-          .catch(handleInternalError)
-      })
       collector.on('reject', (userInput: MessageType, err: Rejection): void => {
         this.onReject(err, userInput, channel, data)
-          .catch(handleInternalError)
+          .catch(err => collector.emit('error', err))
       })
+
+      Prompt.handleCollector(collector, this.function, data, this.duration)
     })
   }
 

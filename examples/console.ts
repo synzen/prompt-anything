@@ -1,4 +1,14 @@
-import { Prompt, PromptFunction, PromptRunner, MessageInterface, PromptCollector, ChannelInterface, VisualInterface, Rejection, PromptNode } from '../src/index'
+import { 
+  Prompt,
+  PromptFunction,
+  PromptRunner,
+  MessageInterface,
+  PromptCollector,
+  ChannelInterface,
+  VisualInterface,
+  Rejection,
+  PromptNode
+} from '../src/index'
 import { EventEmitter } from 'events'
 import { createInterface } from 'readline'
 
@@ -35,14 +45,6 @@ class ConsoleChannel implements ChannelInterface<ConsoleMessage> {
 }
 
 class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
-  static exitVisual: ConsoleVisual = {
-    text: `No longer accepting input.`,
-    newline: true
-  }
-  static inactivityVisual: ConsoleVisual = {
-    text: `You took too long.`,
-    newline: true
-  }
   static getRejectVisual (error: Rejection): ConsoleVisual {
     return {
       text: `That's invalid input! (${error.message})`,
@@ -50,16 +52,10 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
     }
   }
 
-  // Implement abstract methods. These events are automatically called
-  // and should NOT be called manually. These evnts should be emitted
-  async onReject(message: MessageInterface, error: Rejection, channel: ChannelInterface<ConsoleMessage>): Promise<void> {
+  // Implement abstract method. This should NOT be called
+  // manually.
+  async onReject(error: Rejection, message: ConsoleMessage, channel: ChannelInterface<ConsoleMessage>): Promise<void> {
     await this.sendVisual(ConsolePrompt.getRejectVisual(error), channel)
-  }
-  async onInactivity(channel: ChannelInterface<ConsoleMessage>): Promise<void> {
-    await this.sendVisual(ConsolePrompt.inactivityVisual, channel)
-  }
-  async onExit(message: MessageInterface, channel: ChannelInterface<ConsoleMessage>): Promise<void> {
-    await this.sendVisual(ConsolePrompt.exitVisual, channel)
   }
 
   createCollector(channel: ChannelInterface<ConsoleMessage>, data: T): PromptCollector<T, ConsoleMessage> {
@@ -72,7 +68,7 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
       const message = new ConsoleMessage(line)
       if (line === 'exit') {
         // Exits are optional
-        emitter.emit('exit', message)
+        emitter.emit('exit')
       } else {
         // REQUIRED
         // but emitting messages are required
@@ -81,7 +77,9 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
     })
     // REQUIRED
     emitter.once('stop', () => {
-      readline.close()
+      setImmediate(() => {
+        readline.close()
+      })
     })
     return emitter
   }
@@ -106,7 +104,7 @@ const askNameFn: PromptFunction<AgePromptData, ConsoleMessage> = async function 
 const askName = new ConsolePrompt({
   text: `What's your name?`,
   newline: false
-} as ConsoleVisual, askNameFn)
+} as ConsoleVisual, askNameFn, 2000)
 
 // Ask age Prompt that collects messages
 const askAgeFn: PromptFunction<AgePromptData, ConsoleMessage> = async function (m, data) {
@@ -147,6 +145,5 @@ const runner = new PromptRunner({})
 const channel = new ConsoleChannel()
 runner.run(askNameNode, channel)
   .catch(err => {
-    // From the error listener of a prompt
-    console.error(err)
+    console.error('got err', err)
   })

@@ -4,6 +4,8 @@ import { EventEmitter } from "events"
 import { Rejection } from "../errors/Rejection";
 import { PromptNode, PromptNodeCondition } from "../PromptNode";
 import { MessageInterface } from "../interfaces/Message";
+import { UserVoluntaryExitError } from "../errors/user/UserVoluntaryExitError";
+import { UserInactivityError } from "../errors/user/UserInactivityError";
 
 async function flushPromises(): Promise<void> {
   return new Promise(resolve => {
@@ -37,12 +39,6 @@ const promptFunc: PromptFunction<{}, MessageInterface> = async () => ({})
 
 class MyPrompt<DataType> extends Prompt<DataType, MessageInterface> {
   onReject(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  onInactivity(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  onExit(): Promise<void> {
     throw new Error("Method not implemented.");
   }
   createCollector (): EventEmitter {
@@ -386,6 +382,69 @@ describe('Int::PromptRunner', () => {
       await promise
       expect(tooOldFnSpy).toHaveBeenCalledTimes(1)
       expect(tooYoungFnSpy).not.toHaveBeenCalled()
+    })
+    it('rejects on exit', async () => {
+      type PromptData = {
+        age?: number;
+        name?: string;
+      }
+      const thisPromptForm: VisualGenerator<PromptData> = async () => ({
+        text: '1',
+        embed: {
+          title: '1'
+        }
+      })
+      const askNameFnSpy = jest.fn()
+      const askNameFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
+        askNameFnSpy()
+        if (!data) {
+          throw new Error('Missing data')
+        }
+        data.name = m.content
+        return data
+      }
+      const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn)
+      const askNameNode = new PromptNode(askName)
+      const channel = createMockChannel()
+      const runner = new PromptRunner<PromptData, MessageInterface>({})
+      const promise = runner.run(askNameNode, channel)
+      // Wait for all pending promise callbacks to be executed for the emitter to set up
+      await flushPromises()
+      emitter.emit('exit')
+      expect(askNameFnSpy).not.toHaveBeenCalled()
+      await expect(promise).rejects.toThrow(UserVoluntaryExitError)
+    })
+    it('rejects on inactivity', async () => {
+      jest.useFakeTimers()
+      type PromptData = {
+        age?: number;
+        name?: string;
+      }
+      const thisPromptForm: VisualGenerator<PromptData> = async () => ({
+        text: '1',
+        embed: {
+          title: '1'
+        }
+      })
+      const askNameFnSpy = jest.fn()
+      const askNameFn: PromptFunction<PromptData, MessageInterface> = async (m, data) => {
+        askNameFnSpy()
+        if (!data) {
+          throw new Error('Missing data')
+        }
+        data.name = m.content
+        return data
+      }
+      const askName = new MyPrompt<PromptData>(thisPromptForm, askNameFn, 10000)
+      const askNameNode = new PromptNode(askName)
+      const channel = createMockChannel()
+      const runner = new PromptRunner<PromptData, MessageInterface>({})
+      const promise = runner.run(askNameNode, channel)
+      // Wait for all pending promise callbacks to be executed for the emitter to set up
+      await flushPromises()
+      jest.runAllTimers()
+      await expect(promise).rejects.toThrow(UserInactivityError)
+      jest.useRealTimers()
     })
   })
 })
