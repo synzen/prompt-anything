@@ -21,6 +21,7 @@ npm install prompt-anything
   - [Connecting Prompts](#connecting-prompts)
     - [Condition Nodes](#conditional-nodes)
   - [Running Prompts](#running-prompts)
+    - [Error Handling](#error-handling)
 - [Testing](#testing)
 
 ## Implementation
@@ -57,7 +58,7 @@ class MyPrompt<DataType, MessageType> extends Prompt<DataType, MessageType> {
   }
   
   // Implement abstract methods. These events are automatically called
-  abstract async onReject(error: Rejection, message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
+  abstract async onReject(error: Errors.Rejection, message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
   abstract async onInactivity(channel: ChannelInterface<MessageType>): Promise<void>;
   abstract async onExit(message: MessageType, channel: ChannelInterface<MessageType>): Promise<void>;
 }
@@ -116,7 +117,7 @@ const askNamePrompt = new MyPrompt<MyData, MessageType>(askNameVisual, askNameFn
 
 #### Rejecting Input
 
-To reject input, you can check the the content of the message in `PromptFunction`, and throw a `Rejection`. Upon throwing it:
+To reject input, you can check the the content of the message in `PromptFunction`, and throw a `Errors.Rejection`. Upon throwing it:
 
 1. The rejection's message will be sent via your channel implementation's `send` method
 2. The prompt will again wait for input
@@ -126,7 +127,7 @@ To reject input, you can check the the content of the message in `PromptFunction
 const askAgeFn: PromptFunction<MyData, MessageType> = async (m: MessageType, data: MyData) => {
   const age = Number(m.content)
   if (isNaN(age)) {
-    throw new Rejection(`That's not a valid number! Try again.`)
+    throw new Errors.Rejection(`That's not a valid number! Try again.`)
   }
   return {
     ...data,
@@ -219,6 +220,25 @@ const lastPromptData: MyData = await runner.runArray([
 ], channel)
 // (askSurname OR askName) -> askAge -> askLocation -> (englishAsk OR spanishAsk)
 ```
+
+#### Error Handling
+
+Any error that throws within prompts will cause the `PromptRunner`'s `run` to reject. In addition to regular errors, it may throw `Errors.UserVoluntaryExitError` and `Errors.UserInactivityError` (both instances of `Errors.UserError`).
+
+```ts
+try {
+  const lastPromptData: MyData = await runner.run(node, channel)
+} catch (err) {
+  if (err instanceof Errors.UserVoluntaryExitError) {
+    // show an exit message
+  } else if (err instanceof Errors.UserInactivityError) {
+    // show an expired message
+  } else {
+    // All other errors
+  }
+}
+```
+
 
 ## Testing
 
