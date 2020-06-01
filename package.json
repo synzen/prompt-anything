@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "lint": "eslint ./src/**/*",
+    "lint": "eslint \"./src/**/*\"",
     "test": "jest ./src",
     "test-coverage": "jest ./src --coverage",
     "test-watch": "jest --watch"
