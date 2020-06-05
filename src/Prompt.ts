@@ -124,7 +124,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param visual The visual for channel.send to send
    * @param channel Channel to send the message to
    */
-  async sendVisual (visual: VisualInterface|VisualInterface[], channel: ChannelInterface<MessageType>): Promise<MessageType|MessageType[]> {
+  async sendVisual (visual: VisualInterface|VisualInterface[], channel: ChannelInterface<MessageType>): Promise<(MessageType|MessageType[])[]|MessageType> {
     if (Array.isArray(visual)) {
       const sent = []
       for (const v of visual) {
@@ -144,7 +144,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param message The MessageInterface before this prompt
    * @param data Data to generate the user's message
    */
-  async sendUserVisual (channel: ChannelInterface<MessageType>, data: DataType): Promise<MessageType|MessageType[]> {
+  async sendUserVisual (channel: ChannelInterface<MessageType>, data: DataType): Promise<(MessageType|MessageType[])[]|MessageType> {
     return this.sendVisual(await this.getVisual(data), channel)
   }
 
