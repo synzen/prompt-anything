@@ -37,7 +37,7 @@ interface MessageInterface {
 }
 
 interface ChannelInterface<MessageType extends MessageInterface> {
-  send: (visual: VisualInterface) => Promise<MessageType>;
+  send: (visual: VisualInterface) => Promise<MessageType|MessageType[]>;
 }
 ```
 2. The `Prompt` class must be extended to implement the abstract methods:
