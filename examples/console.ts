@@ -78,9 +78,7 @@ class ConsolePrompt<T> extends Prompt<T, ConsoleMessage> {
     })
     // REQUIRED
     emitter.once('stop', () => {
-      setImmediate(() => {
-        readline.close()
-      })
+      readline.close()
     })
     return emitter
   }
