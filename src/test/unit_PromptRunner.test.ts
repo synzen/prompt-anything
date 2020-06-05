@@ -218,50 +218,14 @@ describe('Unit::PromptRunner', () => {
         .mockResolvedValue(node3)
       jest.spyOn(prompt2, 'run')
         .mockResolvedValue(prompt2Returned)
-      const prompt3Returned = {
-        data: { val: 3, c: 3 },
-        terminate: false
-      }
+      const prompt3ReturnData = { val: 3, c: 3 }
       jest.spyOn(node3, 'getNext')
         .mockResolvedValue(null)
       jest.spyOn(prompt3, 'run')
-        .mockResolvedValue(prompt3Returned)
+        .mockResolvedValue(prompt3ReturnData)
       const runner = new PromptRunner<{}, MessageInterface>({})
       const returned = await runner.execute(node1, channel)
-      expect(returned).toEqual(prompt3Returned.data)
-    })
-    it('does not run any more when a prompt terminates', async () => {
-      const channel = createMockChannel()
-      const prompt1 = new MyPrompt(promptVis, promptFunc)
-      const prompt2 = new MyPrompt(promptVis, promptFunc)
-      const prompt3 = new MyPrompt(promptVis, promptFunc)
-      const node1 = new PromptNode(prompt1)
-      node1.prompt = prompt1
-      const node2 = new PromptNode(prompt2)
-      node2.prompt = prompt2
-      const node3 = new PromptNode(prompt3)
-      node3.prompt = prompt3
-      jest.spyOn(node1, 'getNext')
-        .mockResolvedValue(node2)
-      jest.spyOn(node2, 'getNext')
-        .mockResolvedValue(node3)
-      jest.spyOn(node3, 'getNext')
-        .mockResolvedValue(null)
-      jest.spyOn(prompt1, 'run').mockResolvedValue({
-        data: {},
-        terminate: false
-      })
-      jest.spyOn(prompt2, 'run').mockResolvedValue({
-        data: {},
-        terminate: true
-      })
-      const prompt3Run = jest.spyOn(prompt3, 'run').mockResolvedValue({
-        data: {},
-        terminate: true
-      })
-      const runner = new PromptRunner<{}, MessageInterface>({})
-      await runner.execute(node1, channel)
-      expect(prompt3Run).not.toHaveBeenCalled()
+      expect(returned).toEqual(prompt3ReturnData)
     })
   })
   describe('indexesOf', () => {

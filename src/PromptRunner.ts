@@ -115,12 +115,9 @@ export class PromptRunner<DataType, MessageType extends MessageInterface> {
     let thisData = this.initialData
     while (thisNode) {
       const thisPrompt: Prompt<DataType, MessageType> = thisNode.prompt
-      const { data, terminate } = await thisPrompt.run(channel, thisData)
+      const data = await thisPrompt.run(channel, thisData)
       this.ran.push(thisNode.prompt)
       thisData = data
-      if (terminate) {
-        break
-      }
       thisNode = await thisNode.getNext(data)
     }
     return thisData

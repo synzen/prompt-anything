@@ -305,10 +305,7 @@ describe('Unit::Prompt', () => {
         foo: 'bar'
       }
       const result = await promptNoFunc.collect(channel, data)
-      expect(result).toEqual({
-        data,
-        terminate: false
-      })
+      expect(result).toEqual(data)
     })
     describe('collector exit', () => {
       it('rejects on collector exit', async () => {
@@ -377,10 +374,7 @@ describe('Unit::Prompt', () => {
         }
         const promptRun = prompt.collect(channel, {})
         emitter.emit('accept', acceptMessage, acceptData)
-        await expect(promptRun).resolves.toEqual({
-          data: acceptData,
-          terminate: false
-        })
+        await expect(promptRun).resolves.toEqual(acceptData)
       })
     })
   })

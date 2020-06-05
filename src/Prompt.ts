@@ -1,6 +1,5 @@
 import { Rejection } from './errors/Rejection'
 import { EventEmitter } from 'events';
-import { PromptResult } from './PromptResult';
 import { MessageInterface } from './interfaces/Message';
 import { VisualInterface } from './interfaces/Visual';
 import { ChannelInterface } from './interfaces/Channel';
@@ -156,10 +155,10 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param channel The channel to collect from
    * @param data The data before this prompt
    */
-  collect (channel: ChannelInterface<MessageType>, data: DataType): Promise<PromptResult<DataType>> {
+  collect (channel: ChannelInterface<MessageType>, data: DataType): Promise<DataType> {
     return new Promise((resolve, reject) => {
       if (!this.function) {
-        resolve(new PromptResult(data))
+        resolve(data)
         return
       }
       const collector = this.createCollector(channel, data)
@@ -171,7 +170,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
       })
       collector.once('accept', (acceptMessage: MessageType, acceptData: DataType): void => {
         collector.emit('stop')
-        resolve(new PromptResult(acceptData))
+        resolve(acceptData)
       })
       collector.once('inactivity', () => {
         collector.emit('error', new UserInactivityError())
@@ -195,7 +194,7 @@ export abstract class Prompt<DataType, MessageType extends MessageInterface> {
    * @param channel The channel to collect from
    * @param data Data before this prompt
    */
-  async run (channel: ChannelInterface<MessageType>, data: DataType): Promise<PromptResult<DataType>> {
+  async run (channel: ChannelInterface<MessageType>, data: DataType): Promise<DataType> {
     await this.sendUserVisual(channel, data)
     return this.collect(channel, data)
   }
