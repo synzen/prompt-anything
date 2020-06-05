@@ -1,6 +1,6 @@
 {
   "name": "prompt-anything",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "Framework to build a a tree of modular and interactable prompts for anything",
   "main": "build/index.js",
   "types": "build/index.d.ts",
