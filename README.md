@@ -17,7 +17,7 @@ npm install prompt-anything
     - [Conditional Visuals](#conditional-visuals)
     - [Rejecting Input](#rejecting-input)
     - [Skipping Message Collection](#skipping-message-collection)
-    - [Time Limits](#time-limits)
+    - [Time Limits](#time-limitstimeouts)
   - [Connecting Prompts](#connecting-prompts)
     - [Condition Nodes](#conditional-nodes)
   - [Running Prompts](#running-prompts)
